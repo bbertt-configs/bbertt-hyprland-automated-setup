@@ -1,0 +1,4 @@
+hypr_repo_url: https://github.com/bbertt-configs/bbertt-hyprland-dotfiles.git
+hypr_install_path: "{{ playbook_dir }}/../hypr"
+hypr_config_target: "{{ ansible_user_dir }}/.config/hypr"
+hypr_backup_suffix: ".bak"

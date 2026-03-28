@@ -1,0 +1,38 @@
+---
+- name: Ensure ~/.config directory exists
+  ansible.builtin.file:
+    path: "{{ ansible_user_dir }}/.config"
+    state: directory
+    mode: '0755'
+
+- name: Clone or update Hyprland dotfiles repository
+  ansible.builtin.git:
+    repo: "{{ hypr_repo_url }}"
+    dest: "{{ hypr_install_path }}"
+    version: main
+    update: true
+    force: true
+
+- name: Backup existing hypr config if it exists and is not a symlink
+  ansible.builtin.shell: |
+    if [ -e "{{ hypr_config_target }}" ] && [ ! -L "{{ hypr_config_target }}" ]; then
+      mv "{{ hypr_config_target }}" "{{ hypr_config_target }}{{ hypr_backup_suffix }}"
+      echo "Backup created"
+    else
+      echo "No backup needed"
+    fi
+  register: backup_result
+  changed_when: "'Backup created' in backup_result.stdout"
+
+- name: Remove existing hypr config if it's a broken symlink
+  ansible.builtin.file:
+    path: "{{ hypr_config_target }}"
+    state: absent
+  when: hypr_config_target is link or not hypr_config_target is exists
+
+- name: Create symbolic link to hypr config
+  ansible.builtin.file:
+    src: "{{ hypr_install_path }}"
+    dest: "{{ hypr_config_target }}"
+    state: link
+    force: true

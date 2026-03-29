@@ -1,0 +1,5 @@
+---
+lazyvim_repo_url: git@github.com:bbertt-configs/lazyvim-configs.git
+lazyvim_target: "{{ ansible_user_dir }}/.config/nvim"
+lazyvim_backup_suffix: ".bak"
+lazyvim_backup_data: true

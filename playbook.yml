@@ -10,3 +10,4 @@
     - { role: kitty, tags: [kitty] }
     - { role: keyd, tags: [keyd] }
     - { role: mouseless, tags: [mouseless] }
+    - { role: lazyvim, tags: [lazyvim] }

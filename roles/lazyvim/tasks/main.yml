@@ -1,0 +1,51 @@
+---
+- name: Check if SSH key is available
+  tags: [lazyvim]
+  ansible.builtin.command: ssh-add -l
+  register: ssh_check
+  changed_when: false
+  failed_when: false
+
+- name: Warn if SSH agent has no keys
+  ansible.builtin.debug:
+    msg: "Warning: No SSH keys loaded in agent. Ensure SSH key is added with ssh-add for git@github.com access."
+  when: ssh_check.rc != 0
+
+- name: Backup existing nvim config
+  tags: [lazyvim]
+  ansible.builtin.shell: |
+    if [ -d "{{ ansible_user_dir }}/.config/nvim" ] && [ ! -L "{{ ansible_user_dir }}/.config/nvim" ]; then
+      mv {{ ansible_user_dir }}/.config/nvim {{ ansible_user_dir }}/.config/nvim{{ lazyvim_backup_suffix }}
+    fi
+  args:
+    executable: /bin/bash
+  register: nvim_backup
+
+- name: Backup nvim data directories
+  tags: [lazyvim]
+  ansible.builtin.shell: |
+    if {{ lazyvim_backup_data }}; then
+      [ -d "{{ ansible_user_dir }}/.local/share/nvim" ] && mv {{ ansible_user_dir }}/.local/share/nvim {{ ansible_user_dir }}/.local/share/nvim{{ lazyvim_backup_suffix }}
+      [ -d "{{ ansible_user_dir }}/.local/state/nvim" ] && mv {{ ansible_user_dir }}/.local/state/nvim {{ ansible_user_dir }}/.local/state/nvim{{ lazyvim_backup_suffix }}
+      [ -d "{{ ansible_user_dir }}/.cache/nvim" ] && mv {{ ansible_user_dir }}/.cache/nvim {{ ansible_user_dir }}/.cache/nvim{{ lazyvim_backup_suffix }}
+    fi
+  args:
+    executable: /bin/bash
+  when: lazyvim_backup_data
+  register: nvim_data_backup
+
+- name: Ensure .config directory exists
+  tags: [lazyvim]
+  ansible.builtin.file:
+    path: "{{ ansible_user_dir }}/.config"
+    state: directory
+    mode: '0755'
+
+- name: Clone lazyvim config repository
+  tags: [lazyvim]
+  ansible.builtin.git:
+    repo: "{{ lazyvim_repo_url }}"
+    dest: "{{ lazyvim_target }}"
+    version: main
+    accept_hostkey: true
+    force: true

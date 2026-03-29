@@ -19,6 +19,7 @@ ansible-playbook -i inventory.yml playbook.yml --tags hyprlink
 ansible-playbook -i inventory.yml playbook.yml --tags kitty
 ansible-playbook -i inventory.yml playbook.yml --tags keyd
 ansible-playbook -i inventory.yml playbook.yml --tags mouseless
+ansible-playbook -i inventory.yml playbook.yml --tags lazyvim
 ```
 
 Or use role tags directly:
@@ -27,6 +28,7 @@ ansible-playbook -i inventory.yml playbook.yml -e "role=hyprlink"
 ansible-playbook -i inventory.yml playbook.yml -e "role=kitty"
 ansible-playbook -i inventory.yml playbook.yml -e "role=keyd"
 ansible-playbook -i inventory.yml playbook.yml -e "role=mouseless"
+ansible-playbook -i inventory.yml playbook.yml -e "role=lazyvim"
 ```
 
 ## Roles
@@ -43,6 +45,9 @@ Installs `keyd` via yay (AUR) and configures global vim-style navigation by hold
 ### mouseless
 Installs `mouseless` via yay (AUR) and configures mouse-less navigation with vim-style layers for keyboard-only control.
 
+### lazyvim
+Clones LazyVim configuration from a Git repository via SSH and backs up existing Neovim config.
+
 ## What it does
 
 1. Ensures `~/.config` directory exists
@@ -57,6 +62,9 @@ Installs `mouseless` via yay (AUR) and configures mouse-less navigation with vim
 10. Installs mouseless via yay (AUR)
 11. Deploys mouseless config.yaml with nav and mouse layers
 12. Restarts mouseless user service
+13. Backs up existing nvim config to .bak
+14. Optionally backs up nvim data directories
+15. Clones lazyvim configs via SSH
 
 ## Variables
 
@@ -80,6 +88,14 @@ Override defaults in `roles/<role>/defaults/main.yml` or pass via CLI:
 - `mouseless_package` - Package name to install (default: `mouseless`)
 - `mouseless_config_src` - Source path for config.yaml
 - `mouseless_config_dest` - Target path for config.yaml (default: `~/.config/mouseless/config.yaml`)
+
+### lazyvim
+- `lazyvim_repo_url` - Git repository URL (default: `git@github.com:bbertt-configs/lazyvim-configs.git`)
+- `lazyvim_target` - Target directory (default: `~/.config/nvim`)
+- `lazyvim_backup_suffix` - Backup suffix (default: `.bak`)
+- `lazyvim_backup_data` - Whether to backup data directories (default: `true`)
+
+**Note:** Requires SSH key loaded in agent (`ssh-add`) for git@github.com access.
 
 Example with custom repo:
 ```bash

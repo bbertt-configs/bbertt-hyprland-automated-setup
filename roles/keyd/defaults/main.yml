@@ -1,0 +1,4 @@
+---
+keyd_package: keyd
+keyd_config_src: files/default.conf
+keyd_config_dest: /etc/keyd/default.conf

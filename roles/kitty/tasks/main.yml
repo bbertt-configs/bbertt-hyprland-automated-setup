@@ -8,14 +8,14 @@
 
 - name: Copy kitty.conf to target system
   ansible.builtin.copy:
-    src: "{{ kitty_source_path }}/kitty.conf"
+    src: "files/kitty.conf"
     dest: "{{ kitty_config_target }}/kitty.conf"
     mode: '0644'
     backup: true
 
 - name: Copy custom.conf to target system
   ansible.builtin.copy:
-    src: "{{ kitty_source_path }}/custom.conf"
+    src: "files/custom.conf"
     dest: "{{ kitty_config_target }}/custom.conf"
     mode: '0644'
     backup: true

@@ -1,0 +1,31 @@
+---
+- name: Install keyd using yay
+  tags: [keyd]
+  community.general.yay:
+    name: "{{ keyd_package }}"
+    state: present
+
+- name: Create keyd config directory
+  ansible.builtin.file:
+    path: /etc/keyd
+    state: directory
+    mode: '0755'
+
+- name: Deploy keyd default.conf
+  ansible.builtin.copy:
+    src: "{{ keyd_config_src }}"
+    dest: "{{ keyd_config_dest }}"
+    mode: '0644'
+    backup: true
+
+- name: Enable and start keyd service
+  tags: [keyd]
+  ansible.builtin.systemd:
+    name: keyd
+    enabled: true
+    state: started
+
+- name: Reload keyd configuration
+  tags: [keyd]
+  ansible.builtin.command: keyd reload
+  changed_when: false

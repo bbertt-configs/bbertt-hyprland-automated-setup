@@ -18,6 +18,7 @@ Run a specific role only:
 ansible-playbook -i inventory.yml playbook.yml --tags hyprlink
 ansible-playbook -i inventory.yml playbook.yml --tags kitty
 ansible-playbook -i inventory.yml playbook.yml --tags keyd
+ansible-playbook -i inventory.yml playbook.yml --tags mouseless
 ```
 
 Or use role tags directly:
@@ -25,6 +26,7 @@ Or use role tags directly:
 ansible-playbook -i inventory.yml playbook.yml -e "role=hyprlink"
 ansible-playbook -i inventory.yml playbook.yml -e "role=kitty"
 ansible-playbook -i inventory.yml playbook.yml -e "role=keyd"
+ansible-playbook -i inventory.yml playbook.yml -e "role=mouseless"
 ```
 
 ## Roles
@@ -38,6 +40,9 @@ Copies `kitty.conf` and `custom.conf` from `roles/kitty/files/` to `~/.config/ki
 ### keyd
 Installs `keyd` via yay (AUR) and configures global vim-style navigation by holding Caps Lock as a modifier layer.
 
+### mouseless
+Installs `mouseless` via yay (AUR) and configures mouse-less navigation with vim-style layers for keyboard-only control.
+
 ## What it does
 
 1. Ensures `~/.config` directory exists
@@ -49,6 +54,9 @@ Installs `keyd` via yay (AUR) and configures global vim-style navigation by hold
 7. Installs keyd via yay (AUR)
 8. Deploys keyd default.conf with vim motion layer
 9. Enables and starts keyd service
+10. Installs mouseless via yay (AUR)
+11. Deploys mouseless config.yaml with nav and mouse layers
+12. Restarts mouseless user service
 
 ## Variables
 
@@ -67,6 +75,11 @@ Override defaults in `roles/<role>/defaults/main.yml` or pass via CLI:
 - `keyd_package` - Package name to install (default: `keyd`)
 - `keyd_config_src` - Source path for default.conf
 - `keyd_config_dest` - Target path for default.conf (default: `/etc/keyd/default.conf`)
+
+### mouseless
+- `mouseless_package` - Package name to install (default: `mouseless`)
+- `mouseless_config_src` - Source path for config.yaml
+- `mouseless_config_dest` - Target path for config.yaml (default: `~/.config/mouseless/config.yaml`)
 
 Example with custom repo:
 ```bash

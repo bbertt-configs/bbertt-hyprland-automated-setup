@@ -1,0 +1,26 @@
+---
+- name: Install mouseless using yay
+  tags: [mouseless]
+  community.general.yay:
+    name: "{{ mouseless_package }}"
+    state: present
+
+- name: Create mouseless config directory
+  ansible.builtin.file:
+    path: "{{ ansible_user_dir }}/.config/mouseless"
+    state: directory
+    mode: '0755'
+
+- name: Deploy mouseless config.yaml
+  ansible.builtin.copy:
+    src: "{{ mouseless_config_src }}"
+    dest: "{{ mouseless_config_dest }}"
+    mode: '0644'
+    backup: true
+
+- name: Restart mouseless service
+  tags: [mouseless]
+  ansible.builtin.systemd:
+    name: mouseless
+    state: restarted
+    daemon_reload: true

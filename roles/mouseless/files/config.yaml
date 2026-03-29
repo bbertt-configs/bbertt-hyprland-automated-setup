@@ -1,0 +1,72 @@
+# ----------------------------------
+# General settings
+# ----------------------------------
+
+baseMouseSpeed: 500.0
+baseScrollSpeed: 10.0
+
+quickTapTime: 150
+comboTime: 25
+layers:
+  # ==================================
+  # INITIAL LAYER (default)
+  # ==================================
+  - name: initial
+    bindings:
+      # CapsLock toggles nav layer
+      capslock: toggle-layer nav
+
+      # RightShift tap enters mouse layer
+      # rightshift: layer mouse
+      tab: tap-hold-next tab ; toggle-layer mouse ; 500
+
+  # ==================================
+  # NAVIGATION LAYER (your keyd-like behavior)
+  # ==================================
+  - name: nav
+    passThrough: false
+    bindings:
+      h: left
+      j: down
+      k: up
+      l: right
+      n: down
+      p: up
+
+      # CapsLock toggles back to initial
+      capslock: toggle-layer initial
+
+  # ==================================
+  # MOUSE CONTROL LAYER
+  # ==================================
+  - name: mouse
+    passThrough: true
+    bindings:
+      # exit mouse layer
+      esc: layer initial
+      # capslock: layer initial
+
+      # mouse motion
+      h: move -1  0
+      l: move  1  0
+      k: move  0 -1
+      j: move  0  1
+
+      rightalt: speed 0.1
+      # w: speed 2.5
+      leftshift: speed 0.5
+
+      # scrolling
+      n: scroll up
+      m: scroll down
+      comma: scroll left
+      dot: scroll right
+
+      # clicks
+      space: button left
+      f: button left
+      d: button right
+      s: button middle
+
+      # drag-hold
+      a: tap-hold a ; button left ; 0

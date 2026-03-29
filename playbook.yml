@@ -9,3 +9,4 @@
     - { role: hyprlink, tags: [hyprlink] }
     - { role: kitty, tags: [kitty] }
     - { role: keyd, tags: [keyd] }
+    - { role: mouseless, tags: [mouseless] }

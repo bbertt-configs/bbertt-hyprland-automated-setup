@@ -1,0 +1,4 @@
+---
+kitty_source_path: "{{ playbook_dir }}/../config/kitty"
+kitty_config_target: "{{ ansible_user_dir }}/.config/kitty"
+kitty_backup_suffix: ".bak"

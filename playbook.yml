@@ -6,4 +6,5 @@
   become: false
 
   roles:
-    - hyprlink
+    - { role: hyprlink, tags: [hyprlink] }
+    - { role: kitty, tags: [kitty] }

@@ -1,0 +1,21 @@
+---
+- name: Ensure ~/.config/kitty directory exists
+  tags: [kitty]
+  ansible.builtin.file:
+    path: "{{ kitty_config_target }}"
+    state: directory
+    mode: '0755'
+
+- name: Copy kitty.conf to target system
+  ansible.builtin.copy:
+    src: "{{ kitty_source_path }}/kitty.conf"
+    dest: "{{ kitty_config_target }}/kitty.conf"
+    mode: '0644'
+    backup: true
+
+- name: Copy custom.conf to target system
+  ansible.builtin.copy:
+    src: "{{ kitty_source_path }}/custom.conf"
+    dest: "{{ kitty_config_target }}/custom.conf"
+    mode: '0644'
+    backup: true

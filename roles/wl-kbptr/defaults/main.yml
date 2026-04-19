@@ -1,0 +1,4 @@
+---
+wlkbptr_config_src: files/config
+wlkbptr_config_dest: "{{ ansible_user_dir }}/.config/wl-kbptr/config"
+wlkbptr_font_src: files/NotoSans-All-Caps.ttf

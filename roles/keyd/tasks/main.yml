@@ -1,7 +1,7 @@
 ---
 - name: Install keyd using yay
   tags: [keyd]
-  community.general.yay:
+  community.general.pacman:
     name: "{{ keyd_package }}"
     state: present
 

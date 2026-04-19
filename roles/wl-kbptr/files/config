@@ -1,0 +1,34 @@
+[mode_floating]
+source=detect
+label_color=#ffffffff
+label_select_color=#ffff00ff
+unselectable_bg_color=#2226
+selectable_bg_color=#0055ffaa
+selectable_border_color=#6699ff
+label_font_family=Noto Sans All Caps
+label_font_size=12 40% 100
+label_symbols=sadjklewcmpgh
+
+[mode_tile]
+label_color=#ffffffff
+label_select_color=#000000ff
+unselectable_bg_color=#1e1e1ecc
+selectable_bg_color=#004d4050
+selectable_border_color=#00bcd4ff
+label_font_family=Noto Sans All Caps
+label_font_size=10 40% 100
+label_symbols=abcdefghijklmnopqrstuvwxyz
+
+[mode_bisect]
+label_color=#fffd
+label_font_size=20
+label_font_family=sans-serif
+label_padding=12
+pointer_size=20
+pointer_color=#e22d
+unselectable_bg_color=#2226
+even_area_bg_color=#0304
+even_area_border_color=#0408
+odd_area_bg_color=#0034
+odd_area_border_color=#0048
+history_border_color=#3339

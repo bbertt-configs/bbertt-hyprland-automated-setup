@@ -1,0 +1,26 @@
+---
+- name: Create wl-kbptr config directory
+  ansible.builtin.file:
+    path: "{{ ansible_user_dir }}/.config/wl-kbptr"
+    state: directory
+    mode: '0755'
+
+- name: Deploy wl-kbptr config
+  ansible.builtin.copy:
+    src: "{{ wlkbptr_config_src }}"
+    dest: "{{ wlkbptr_config_dest }}"
+    mode: '0644'
+    backup: true
+
+- name: Create local user font directory
+  ansible.builtin.file:
+    path: "{{ ansible_user_dir }}/.local/share/fonts"
+    state: directory
+    mode: '0755'
+
+- name: Install wl-kbptr font
+  ansible.builtin.copy:
+    src: "{{ wlkbptr_font_src }}"
+    dest: "{{ ansible_user_dir }}/.local/share/fonts/{{ wlkbptr_font_src | basename }}"
+    mode: '0644'
+  notify: Refresh font cache

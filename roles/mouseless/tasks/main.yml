@@ -1,10 +1,4 @@
 ---
-- name: Install mouseless using yay
-  tags: [mouseless]
-  community.general.yay:
-    name: "{{ mouseless_package }}"
-    state: present
-
 - name: Create mouseless config directory
   ansible.builtin.file:
     path: "{{ ansible_user_dir }}/.config/mouseless"

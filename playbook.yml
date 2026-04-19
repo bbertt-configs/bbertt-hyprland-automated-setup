@@ -10,4 +10,5 @@
     - { role: kitty, tags: [kitty] }
     - { role: keyd, tags: [keyd] }
     - { role: mouseless, tags: [mouseless] }
+    - { role: wl-kbptr, tags: [wl-kbptr] }
     - { role: lazyvim, tags: [lazyvim] }

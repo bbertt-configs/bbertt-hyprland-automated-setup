@@ -16,9 +16,8 @@ layers:
       # CapsLock toggles nav layer
       capslock: toggle-layer nav
 
-      # RightShift tap enters mouse layer
-      # rightshift: layer mouse
-      tab: tap-hold-next tab ; toggle-layer mouse ; 500
+      # LeftCtrl: quick tap enters mouse layer, hold/combo stays a normal ctrl
+      leftctrl: tap-hold-next layer mouse ; leftctrl ; 200
 
   # ==================================
   # NAVIGATION LAYER (your keyd-like behavior)
@@ -44,6 +43,7 @@ layers:
     bindings:
       # exit mouse layer
       esc: layer initial
+      leftctrl: layer initial
       # capslock: layer initial
 
       # mouse motion
@@ -52,9 +52,10 @@ layers:
       k: move  0 -1
       j: move  0  1
 
-      rightalt: speed 0.1
-      # w: speed 2.5
-      leftshift: speed 0.5
+      # speed control (hold to modify cursor speed)
+      a: speed 0.3 # slow down
+      s: speed 2.0 # speed up
+      d: speed 3.0 # speed up more (faster than s)
 
       # scrolling
       n: scroll up
@@ -65,8 +66,5 @@ layers:
       # clicks
       space: button left
       f: button left
-      d: button right
-      s: button middle
-
-      # drag-hold
-      a: tap-hold a ; button left ; 0
+      g: button right
+      v: button middle

@@ -1,0 +1,12 @@
+---
+# jbensmann/mouseless, original standalone setup (CapsLock nav + LeftCtrl mouse layer).
+# Deliberately NOT in playbook.yml — run it explicitly via mouseless-solo.yml.
+mouseless_solo_config_src: files/config.yaml
+mouseless_solo_config_dest: "{{ ansible_user_dir }}/.config/mouseless/config.yaml"
+
+# Whether to remove the Ansible-managed Mouseless autostart block from Hyprland.
+# Leaving Mouseless running against this config reintroduces the LeftCtrl collision
+# and the device feedback loop, so this defaults to true.
+mouseless_solo_remove_click_autostart: true
+mouseless_solo_startup_file: "{{ ansible_user_dir }}/.config/hypr/UserConfigs/Startup_Apps.conf"
+mouseless_solo_click_marker: "# {mark} ANSIBLE MANAGED — mouseless.click autostart"

@@ -1,0 +1,9 @@
+---
+# scope: user — the running unit is the user one; the packaged system unit is unused.
+- name: Restart mouseless user service
+  ansible.builtin.systemd:
+    name: mouseless
+    scope: user
+    enabled: true
+    state: restarted
+    daemon_reload: true

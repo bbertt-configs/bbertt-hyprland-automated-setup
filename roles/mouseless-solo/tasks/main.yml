@@ -1,0 +1,33 @@
+---
+- name: Create mouseless config directory
+  ansible.builtin.file:
+    path: "{{ mouseless_solo_config_dest | dirname }}"
+    state: directory
+    mode: '0755'
+
+- name: Deploy original standalone mouseless config.yaml
+  ansible.builtin.copy:
+    src: "{{ mouseless_solo_config_src }}"
+    dest: "{{ mouseless_solo_config_dest }}"
+    mode: '0644'
+    backup: true
+  notify: Restart mouseless user service
+
+# The two configs are mutually exclusive. This config has no devicesExclude and binds
+# leftctrl, both of which conflict with Mouseless, so its autostart is removed by default.
+# Already-running instances are left alone deliberately — signalling the flatpak can
+# corrupt its config on shutdown. Quit it from its own UI, or just log out.
+- name: Remove Mouseless autostart from Hyprland
+  when: mouseless_solo_remove_click_autostart | bool
+  ansible.builtin.blockinfile:
+    path: "{{ mouseless_solo_startup_file }}"
+    marker: "{{ mouseless_solo_click_marker }}"
+    state: absent
+
+- name: Report remaining manual step
+  when: mouseless_solo_remove_click_autostart | bool
+  ansible.builtin.debug:
+    msg: >-
+      Mouseless autostart removed. A running instance is still active this session —
+      quit it from its own UI (tap Left Shift, then Tab) or log out. Do not kill it;
+      signalling it can corrupt its config.

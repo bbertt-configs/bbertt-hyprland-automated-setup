@@ -1,0 +1,26 @@
+---
+# Standalone entrypoint for reverting to jbensmann/mouseless on its own.
+#
+# This role is deliberately absent from playbook.yml so a normal run can never
+# clobber the coexistence config. Run it explicitly:
+#
+#   ansible-playbook -i inventory.yml mouseless-solo.yml
+#
+# To keep Mouseless's autostart in place (not recommended — see the role's config
+# header for why the two conflict):
+#
+#   ansible-playbook -i inventory.yml mouseless-solo.yml \
+#     -e mouseless_solo_remove_click_autostart=false
+#
+# To go back to the coexistence setup:
+#
+#   ansible-playbook -i inventory.yml playbook.yml --tags mouseless,mouseless-click
+
+- name: Restore standalone jbensmann/mouseless setup
+  hosts: localhost
+  connection: local
+  gather_facts: true
+  become: false
+
+  roles:
+    - { role: mouseless-solo, tags: [mouseless-solo] }

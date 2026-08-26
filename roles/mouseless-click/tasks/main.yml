@@ -1,0 +1,56 @@
+---
+# Tagged `packages` so it can be skipped where flatpak is provisioned elsewhere:
+#   --skip-tags packages
+- name: Install flatpak
+  tags: [mouseless-click, packages]
+  become: true
+  community.general.pacman:
+    name: "{{ mouseless_click_packages }}"
+    state: present
+
+- name: Add Flathub remote (provides org.gnome.Platform/50 runtime)
+  tags: [mouseless-click]
+  community.general.flatpak_remote:
+    name: "{{ mouseless_click_flathub_name }}"
+    flatpakrepo_url: "{{ mouseless_click_flathub_url }}"
+    method: "{{ mouseless_click_flatpak_method }}"
+    state: present
+
+- name: Add Sonuscape remote
+  tags: [mouseless-click]
+  community.general.flatpak_remote:
+    name: "{{ mouseless_click_remote_name }}"
+    flatpakrepo_url: "{{ mouseless_click_remote_url }}"
+    method: "{{ mouseless_click_flatpak_method }}"
+    state: present
+
+- name: Install Mouseless flatpak
+  tags: [mouseless-click]
+  community.general.flatpak:
+    name: "{{ mouseless_click_app_id }}"
+    remote: "{{ mouseless_click_remote_name }}"
+    method: "{{ mouseless_click_flatpak_method }}"
+    state: present
+
+- name: Ensure Hyprland UserConfigs directory exists
+  tags: [mouseless-click]
+  ansible.builtin.file:
+    path: "{{ mouseless_click_startup_file | dirname }}"
+    state: directory
+    mode: '0755'
+
+# Order is critical. Whichever program starts first wins the exclusive EVIOCGRAB on
+# the physical keyboards. jbensmann must win: without the grab it cannot suppress the
+# original keystroke, so CapsLock+h would emit both "h" and Left arrow. Waiting for its
+# uinput device is deterministic, unlike a fixed sleep. If jbensmann never comes up the
+# loop times out and Mouseless grabs the physical keyboards directly — degrading to
+# "no CapsLock arrows" rather than "no mouse control at all".
+- name: Configure Mouseless autostart in Hyprland
+  tags: [mouseless-click]
+  ansible.builtin.blockinfile:
+    path: "{{ mouseless_click_startup_file }}"
+    marker: "{{ mouseless_click_marker }}"
+    create: true
+    mode: '0644'
+    block: |
+      exec-once = sh -c 'for i in $(seq 1 {{ mouseless_click_wait_timeout }}); do grep -q "{{ mouseless_click_wait_device }}" /proc/bus/input/devices && break; sleep 1; done; flatpak run {{ mouseless_click_app_id }}'

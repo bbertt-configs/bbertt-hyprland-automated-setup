@@ -1,0 +1,28 @@
+---
+# Sonuscape Mouseless (mouseless.click) — keyboard-driven mouse control.
+# Coexists with jbensmann/mouseless, which handles key remapping (CapsLock nav layer).
+
+mouseless_click_packages:
+  - flatpak
+
+# The sonuscape repo hosts ONLY the app + its Locale extension. The app declares
+# runtime=org.gnome.Platform/x86_64/50, which is not in that repo — so Flathub is
+# required or the install fails with an unresolved runtime.
+mouseless_click_flathub_name: flathub
+mouseless_click_flathub_url: https://dl.flathub.org/repo/flathub.flatpakrepo
+
+mouseless_click_remote_name: sonuscape
+mouseless_click_remote_url: https://dl.sonuscape.net/flatpak/sonuscape.flatpakrepo
+
+mouseless_click_app_id: net.sonuscape.mouseless
+mouseless_click_flatpak_method: user
+
+# Hyprland autostart. Written into the hyprlink-managed dotfiles repo, so this role
+# must run AFTER hyprlink (which does a force git update and would discard the block).
+mouseless_click_startup_file: "{{ ansible_user_dir }}/.config/hypr/UserConfigs/Startup_Apps.conf"
+mouseless_click_marker: "# {mark} ANSIBLE MANAGED — mouseless.click autostart"
+
+# Name of jbensmann's uinput keyboard. The autostart waits for this device so
+# jbensmann wins the exclusive EVIOCGRAB on the physical keyboards.
+mouseless_click_wait_device: "mouseless keyboard"
+mouseless_click_wait_timeout: 30

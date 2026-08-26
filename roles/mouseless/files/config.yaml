@@ -1,12 +1,30 @@
 # ----------------------------------
-# General settings
+# jbensmann/mouseless — key remapping only
+#
+# Mouse control is handled by Sonuscape Mouseless (mouseless.click), see the
+# mouseless-click role. This config is deliberately limited to the CapsLock nav
+# layer, because Mouseless has no key-remapping capability of its own.
+#
+# Two things here exist purely so the two programs can coexist:
+#
+#   1. No `leftctrl` binding. Mouseless binds "toggle free mode: ControlLeft tap",
+#      so the old `leftctrl: tap-hold-next layer mouse` fired both on one tap.
+#   2. `devicesExclude` below, which breaks a feedback loop between the two.
+#
+# CapsLock itself is unbound in Mouseless, so the nav layer needs no special handling.
 # ----------------------------------
 
-baseMouseSpeed: 500.0
-baseScrollSpeed: 10.0
+# Do not read Mouseless's own virtual devices. Without this, jbensmann remaps the
+# keystrokes Mouseless synthesizes and feeds them back in — a feedback loop between
+# the two programs. Excluding by Mouseless's device names (stable across machines)
+# rather than whitelisting physical keyboards (host-specific) keeps this portable.
+devicesExclude:
+  - "Mouseless-Virtual-Device"
+  - "Mouseless-Virtual-Keyboard-WL"
 
 quickTapTime: 150
 comboTime: 25
+
 layers:
   # ==================================
   # INITIAL LAYER (default)
@@ -16,11 +34,8 @@ layers:
       # CapsLock toggles nav layer
       capslock: toggle-layer nav
 
-      # LeftCtrl: quick tap enters mouse layer, hold/combo stays a normal ctrl
-      leftctrl: tap-hold-next layer mouse ; leftctrl ; 200
-
   # ==================================
-  # NAVIGATION LAYER (your keyd-like behavior)
+  # NAVIGATION LAYER (keyd-like behavior)
   # ==================================
   - name: nav
     passThrough: false
@@ -34,37 +49,3 @@ layers:
 
       # CapsLock toggles back to initial
       capslock: toggle-layer initial
-
-  # ==================================
-  # MOUSE CONTROL LAYER
-  # ==================================
-  - name: mouse
-    passThrough: true
-    bindings:
-      # exit mouse layer
-      esc: layer initial
-      leftctrl: layer initial
-      # capslock: layer initial
-
-      # mouse motion
-      h: move -1  0
-      l: move  1  0
-      k: move  0 -1
-      j: move  0  1
-
-      # speed control (hold to modify cursor speed)
-      a: speed 0.3 # slow down
-      s: speed 2.0 # speed up
-      d: speed 3.0 # speed up more (faster than s)
-
-      # scrolling
-      n: scroll up
-      m: scroll down
-      comma: scroll left
-      dot: scroll right
-
-      # clicks
-      space: button left
-      f: button left
-      g: button right
-      v: button middle

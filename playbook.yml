@@ -10,5 +10,8 @@
     - { role: kitty, tags: [kitty] }
     - { role: keyd, tags: [keyd] }
     - { role: mouseless, tags: [mouseless] }
+    # Must run after hyprlink (force git update would discard the autostart block)
+    # and after mouseless, so jbensmann's coexistence config is in place first.
+    - { role: mouseless-click, tags: [mouseless-click] }
     - { role: wl-kbptr, tags: [wl-kbptr] }
     - { role: lazyvim, tags: [lazyvim] }

@@ -1,0 +1,12 @@
+---
+# scope: user is required. Two units named mouseless.service exist: the packaged system
+# unit (disabled, unused) and the user unit that actually runs. Without scope: user this
+# targets the system unit, so a deployed config never takes effect — and starting it would
+# spawn a second instance competing for the exclusive keyboard grab.
+- name: Restart mouseless user service
+  ansible.builtin.systemd:
+    name: mouseless
+    scope: user
+    enabled: true
+    state: restarted
+    daemon_reload: true

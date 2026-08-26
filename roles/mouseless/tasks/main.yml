@@ -11,10 +11,4 @@
     dest: "{{ mouseless_config_dest }}"
     mode: '0644'
     backup: true
-
-- name: Restart mouseless service
-  tags: [mouseless]
-  ansible.builtin.systemd:
-    name: mouseless
-    state: restarted
-    daemon_reload: true
+  notify: Restart mouseless user service

@@ -1,0 +1,91 @@
+#!/usr/bin/env bash
+# Refresh jbensmann/mouseless so its layers (CapsLock nav) work again.
+#
+# Why this is needed: EVIOCGRAB is exclusive. jbensmann must hold the grab on the
+# physical keyboards, because without it it cannot suppress the original keystroke
+# and CapsLock+h would emit both "h" and Left arrow. Sonuscape Mouseless also grabs
+# keyboards, including newly hotplugged ones — so unplugging and replugging an
+# external keyboard lets Mouseless win it, silently killing the nav layer on that
+# keyboard while the built-in one keeps working.
+#
+# Restarting jbensmann reclaims any device nothing else holds. If Mouseless already
+# holds one, only quitting Mouseless releases it, so this reports that explicitly
+# rather than pretending to have fixed it.
+
+set -uo pipefail
+
+UNIT=mouseless.service
+APP_NAME="Mouseless layers"
+
+say() {
+    printf '%s\n' "$2"
+    command -v notify-send >/dev/null 2>&1 && notify-send -a "$APP_NAME" "$1" "$2"
+}
+
+if ! systemctl --user cat "$UNIT" >/dev/null 2>&1; then
+    say "Refresh failed" "No $UNIT user unit found. Is jbensmann/mouseless installed?"
+    exit 1
+fi
+
+if ! systemctl --user restart "$UNIT" 2>/dev/null; then
+    say "Refresh failed" "systemctl --user restart $UNIT failed."
+    exit 1
+fi
+
+# Wait for the unit to come up, then let it enumerate and grab.
+for _ in $(seq 1 20); do
+    systemctl --user is-active --quiet "$UNIT" && break
+    sleep 0.25
+done
+sleep 1.5
+
+# Scope the log to this invocation only, so a stale failure from a previous run
+# is never mistaken for a current one.
+inv=$(systemctl --user show -p InvocationID --value "$UNIT" 2>/dev/null)
+if [ -z "$inv" ]; then
+    say "Refresh incomplete" "Restarted, but could not read the unit's InvocationID to verify grabs."
+    exit 1
+fi
+log=$(journalctl --user _SYSTEMD_INVOCATION_ID="$inv" --no-pager -o cat 2>/dev/null)
+
+grabbed=$(printf '%s\n' "$log" | grep -c 'Reading from keyboard device')
+failed_names=$(printf '%s\n' "$log" \
+    | sed -n 's/.*Failed to grab keyboard device \([^:]*\):.*/\1/p' \
+    | sort -u)
+
+if [ -n "$failed_names" ]; then
+    self_pid=$(systemctl --user show -p MainPID --value "$UNIT" 2>/dev/null)
+    detail=""
+    while IFS= read -r dev; do
+        [ -n "$dev" ] || continue
+        pretty=$(awk -v e="$(basename "$dev")" \
+            '/^N: Name=/{n=$0;sub(/^N: Name="/,"",n);sub(/"$/,"",n)} /^H: Handlers=/{if($0 ~ e"( |$)") print n}' \
+            /proc/bus/input/devices 2>/dev/null)
+
+        # Resolve who is actually blocking: skip the compositor, the bar, and
+        # jbensmann's own process (it holds the fd but lost the grab).
+        holders=""
+        for pid in $(fuser "$dev" 2>/dev/null); do
+            [ "$pid" = "$self_pid" ] && continue
+            cmd=$(tr '\0' ' ' < "/proc/$pid/cmdline" 2>/dev/null)
+            comm=$(cat "/proc/$pid/comm" 2>/dev/null)
+            case "$comm" in Hyprland|waybar|mouseless) continue ;; esac
+            case "$cmd" in
+                *share/mouseless*) name="Sonuscape Mouseless (flatpak)" ;;
+                *)                 name="${comm:-pid $pid}" ;;
+            esac
+            case "$holders" in *"$name"*) ;; *) holders="${holders}${holders:+, }${name}" ;; esac
+        done
+
+        detail="${detail}  - ${pretty:-$dev}${holders:+ -- held by ${holders}}"$'\n'
+    done <<< "$failed_names"
+
+    say "Layers only partly active" \
+"Restarted, but could not grab:
+${detail}
+Quit Mouseless from its own UI (tap Left Shift, then Tab), then run this again.
+Do not kill it -- signalling the flatpak can corrupt its config."
+    exit 1
+fi
+
+say "Layers refreshed" "$grabbed keyboard device(s) grabbed. CapsLock nav is active."

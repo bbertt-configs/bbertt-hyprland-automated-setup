@@ -26,3 +26,14 @@ mouseless_click_marker: "# {mark} ANSIBLE MANAGED — mouseless.click autostart"
 # jbensmann wins the exclusive EVIOCGRAB on the physical keyboards.
 mouseless_click_wait_device: "mouseless keyboard"
 mouseless_click_wait_timeout: 30
+
+# Refresh helper. Hotplugging a keyboard lets whichever program reacts first win the
+# exclusive grab, so an external keyboard can silently lose the nav layer. This script
+# restarts jbensmann and reports which program holds any device it could not reclaim.
+# Installed outside the hyprlink-managed dotfiles repo so a force git update cannot
+# remove it; the keybind itself does live in that repo and is re-applied each run.
+mouseless_click_refresh_script_src: files/mouseless-refresh
+mouseless_click_refresh_script_dest: "{{ ansible_user_dir }}/.local/bin/mouseless-refresh"
+mouseless_click_keybind_file: "{{ ansible_user_dir }}/.config/hypr/UserConfigs/UserKeybinds.conf"
+mouseless_click_keybind_marker: "# {mark} ANSIBLE MANAGED — mouseless refresh keybind"
+mouseless_click_refresh_bind: "$mainMod CTRL ALT, R"

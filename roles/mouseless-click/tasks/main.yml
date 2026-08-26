@@ -54,3 +54,30 @@
     mode: '0644'
     block: |
       exec-once = sh -c 'for i in $(seq 1 {{ mouseless_click_wait_timeout }}); do grep -q "{{ mouseless_click_wait_device }}" /proc/bus/input/devices && break; sleep 1; done; flatpak run {{ mouseless_click_app_id }}'
+
+- name: Ensure ~/.local/bin exists
+  tags: [mouseless-click]
+  ansible.builtin.file:
+    path: "{{ mouseless_click_refresh_script_dest | dirname }}"
+    state: directory
+    mode: '0755'
+
+- name: Install mouseless refresh helper
+  tags: [mouseless-click]
+  ansible.builtin.copy:
+    src: "{{ mouseless_click_refresh_script_src }}"
+    dest: "{{ mouseless_click_refresh_script_dest }}"
+    mode: '0755'
+
+# UserKeybinds.conf is the file the dotfiles explicitly reserve for user binds, and
+# hyprland.conf already sources it. Managed with blockinfile because hyprlink force
+# updates that repo, which would otherwise drop the bind.
+- name: Bind mouseless refresh in Hyprland
+  tags: [mouseless-click]
+  ansible.builtin.blockinfile:
+    path: "{{ mouseless_click_keybind_file }}"
+    marker: "{{ mouseless_click_keybind_marker }}"
+    create: true
+    mode: '0644'
+    block: |
+      bindd = {{ mouseless_click_refresh_bind }}, refresh mouseless layers, exec, {{ mouseless_click_refresh_script_dest }}

@@ -37,3 +37,19 @@ mouseless_click_refresh_script_dest: "{{ ansible_user_dir }}/.local/bin/mouseles
 mouseless_click_keybind_file: "{{ ansible_user_dir }}/.config/hypr/UserConfigs/UserKeybinds.conf"
 mouseless_click_keybind_marker: "# {mark} ANSIBLE MANAGED — mouseless refresh keybind"
 mouseless_click_refresh_bind: "$mainMod CTRL ALT, R"
+
+# Mouseless grabs every keyboard it classifies as one, including newly hotplugged
+# ones and jbensmann's virtual output. Excluding the PHYSICAL keyboards leaves it
+# grabbing only jbensmann's "mouseless keyboard", so jbensmann reliably owns the
+# real hardware no matter what order things start or how often a keyboard is
+# replugged. Mouseless still sees every keystroke, because jbensmann passes them
+# through to that virtual device.
+#
+# Entries match by case-insensitive name substring, or by id (ids:VVVV:PPPP).
+# Discover values with: flatpak run net.sonuscape.mouseless --list-input-devices
+# HOST-SPECIFIC — override per machine. Keep entries specific enough not to also
+# match "mouseless keyboard", or Mouseless is left with no input at all.
+mouseless_click_config: "{{ ansible_user_dir }}/.var/app/net.sonuscape.mouseless/data/mouseless/configs/config.yaml"
+mouseless_click_excluded_devices:
+  - AT Translated Set 2 keyboard
+  - AULA-F75

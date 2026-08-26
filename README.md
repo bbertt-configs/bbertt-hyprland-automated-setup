@@ -122,6 +122,43 @@ physical keyboards directly — you lose CapsLock arrows but keep mouse control.
 deliberate; excluding the physical keyboards in Mouseless's own config would instead
 leave it with no input at all.
 
+### Why Mouseless excludes the physical keyboards
+
+`EVIOCGRAB` is exclusive, and Mouseless grabs every device it classifies as a keyboard —
+including ones hotplugged after startup. So replugging an external keyboard lets Mouseless
+win it, and jbensmann can never get it back:
+
+```
+Keybord device has been removed: event13 (AULA-F75 5.0 KB Keyboard)
+Detected new keyboard device:    event13 (AULA-F75 5.0 KB Keyboard)
+Failed to grab keyboard device   event13: device or resource busy
+```
+
+Startup order alone cannot fix this, because the race reopens on every replug. The fix is
+`excluded_input_devices` in Mouseless's own config, set by the `mouseless-click` role:
+Mouseless then grabs only jbensmann's `mouseless keyboard`, so jbensmann reliably owns the
+real hardware. Mouseless still sees every keystroke, because jbensmann passes them through
+to that virtual device.
+
+Discover the right values on a new machine:
+
+```bash
+flatpak run net.sonuscape.mouseless --list-input-devices
+```
+
+Entries match by case-insensitive name substring, or by id (`ids:VVVV:PPPP`). Keep them
+specific enough not to also match `mouseless keyboard` — that would leave Mouseless with no
+input at all. Override `mouseless_click_excluded_devices` per host.
+
+The tradeoff is deliberate: with the physical keyboards excluded, Mouseless depends on
+jbensmann running. If jbensmann dies, Mouseless has no input source. `SUPER+CTRL+ALT+R`
+restarts jbensmann and is a Hyprland bind, so it keeps working in that state.
+
+Mouseless caches its config in memory and writes it on exit, so a running instance will
+overwrite the file when it quits. Apply changes by quitting it from its own UI (tap Left
+Shift, then Tab) and relaunching — the role only rewrites the empty default, so it never
+clobbers settings made in the app's own editor.
+
 ### Role order matters
 
 `mouseless-click` must run after `hyprlink`. `hyprlink` does a `force: true` git update of

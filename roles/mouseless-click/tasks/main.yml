@@ -81,3 +81,28 @@
     mode: '0644'
     block: |
       bindd = {{ mouseless_click_refresh_bind }}, refresh mouseless layers, exec, {{ mouseless_click_refresh_script_dest }}
+
+# Only rewrites the empty default, so it provisions a fresh install without ever
+# clobbering settings made in the app's own config editor. Mouseless owns this file;
+# Ansible deliberately does not manage the rest of it.
+- name: Exclude physical keyboards from Mouseless grabs
+  tags: [mouseless-click]
+  when: mouseless_click_excluded_devices | length > 0
+  ansible.builtin.replace:
+    path: "{{ mouseless_click_config }}"
+    regexp: '^excluded_input_devices: \[\]$'
+    replace: |-
+      excluded_input_devices:
+      {% for d in mouseless_click_excluded_devices %}
+      - {{ d }}
+      {% endfor %}
+  register: mouseless_click_exclusions
+
+- name: Note that Mouseless must restart to apply exclusions
+  tags: [mouseless-click]
+  when: mouseless_click_exclusions.changed
+  ansible.builtin.debug:
+    msg: >-
+      Device exclusions written. Mouseless caches its config in memory and saves on
+      exit, so a running instance will overwrite this file when it quits. Quit it from
+      its own UI (tap Left Shift, then Tab) and relaunch, or log out and back in.

@@ -1,0 +1,62 @@
+---
+# Mirrors LinuxBeginnings/Arch-Hyprland install-scripts/zsh.sh, made idempotent:
+# git clones instead of the curl | sh installer, and copies with backups.
+
+- name: Install zsh packages
+  tags: [zsh, packages]
+  become: true
+  community.general.pacman:
+    name: "{{ zsh_packages }}"
+    state: present
+
+# update: false — Oh My Zsh updates itself; pulling here would race its updater.
+- name: Clone Oh My Zsh
+  tags: [zsh]
+  ansible.builtin.git:
+    repo: "{{ zsh_omz_repo_url }}"
+    dest: "{{ zsh_omz_dir }}"
+    depth: 1
+    update: false
+
+- name: Clone Oh My Zsh plugins
+  tags: [zsh]
+  ansible.builtin.git:
+    repo: "{{ item.repo }}"
+    dest: "{{ zsh_omz_dir }}/custom/plugins/{{ item.name }}"
+    depth: 1
+  loop: "{{ zsh_plugins }}"
+  loop_control:
+    label: "{{ item.name }}"
+
+# custom/themes instead of upstream's themes/: Oh My Zsh checks custom/ first,
+# and it keeps the Oh My Zsh checkout clean so its self-update never conflicts.
+- name: Copy extra Oh My Zsh themes
+  tags: [zsh]
+  ansible.builtin.copy:
+    src: themes/
+    dest: "{{ zsh_omz_dir }}/custom/themes/"
+    mode: '0644'
+
+- name: Copy .zshrc to target system
+  tags: [zsh]
+  ansible.builtin.copy:
+    src: zshrc
+    dest: "{{ ansible_user_dir }}/.zshrc"
+    mode: '0644'
+    backup: true
+
+- name: Copy .zprofile to target system
+  tags: [zsh]
+  ansible.builtin.copy:
+    src: zprofile
+    dest: "{{ ansible_user_dir }}/.zprofile"
+    mode: '0644'
+    backup: true
+
+- name: Set zsh as the default login shell
+  tags: [zsh]
+  become: true
+  ansible.builtin.user:
+    name: "{{ ansible_user_id }}"
+    shell: /usr/bin/zsh
+  when: zsh_set_default_shell | bool

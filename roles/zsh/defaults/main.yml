@@ -1,0 +1,16 @@
+---
+zsh_packages:
+  - zsh
+  - zsh-completions
+  - lsd
+  - fzf
+  - fastfetch
+  - git
+zsh_omz_repo_url: https://github.com/ohmyzsh/ohmyzsh.git
+zsh_omz_dir: "{{ ansible_user_dir }}/.oh-my-zsh"
+zsh_plugins:
+  - name: zsh-autosuggestions
+    repo: https://github.com/zsh-users/zsh-autosuggestions.git
+  - name: zsh-syntax-highlighting
+    repo: https://github.com/zsh-users/zsh-syntax-highlighting.git
+zsh_set_default_shell: true

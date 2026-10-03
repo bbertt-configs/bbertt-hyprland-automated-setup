@@ -8,6 +8,26 @@ This Ansible playbook automates setting up your Hyprland dotfiles and kitty term
 
 ## Usage
 
+Each machine profile is its own playbook; the `Makefile` is a shortcut for running one.
+Targets prompt for your sudo password (`-K`) since some roles install packages.
+
+| Command              | Playbook            | Roles                                    |
+|----------------------|---------------------|------------------------------------------|
+| `make arch-wsl`      | `arch-wsl.yml`      | zsh, lazyvim                             |
+| `make arch-hyprland` | `playbook.yml`      | all roles below except `mouseless-solo`  |
+| `make mouseless-solo`| `mouseless-solo.yml`| mouseless-solo                           |
+| `make check`         | all                 | syntax check only                        |
+
+```bash
+make arch-wsl TAGS=zsh                         # only some roles of a profile
+make arch-hyprland ARGS="-e hypr_repo_url=..."  # extra ansible-playbook flags
+make arch-wsl BECOME=                          # no sudo prompt (passwordless sudo)
+```
+
+To add a role to a profile, add it to that profile's playbook, not the Makefile.
+
+The `ansible-playbook` commands below work the same without `make`.
+
 Run all roles:
 ```bash
 ansible-playbook -i inventory.yml playbook.yml
@@ -26,6 +46,7 @@ ansible-playbook -i inventory.yml playbook.yml --tags keyd
 ansible-playbook -i inventory.yml playbook.yml --tags mouseless
 ansible-playbook -i inventory.yml playbook.yml --tags mouseless-click
 ansible-playbook -i inventory.yml playbook.yml --tags lazyvim
+ansible-playbook -i inventory.yml playbook.yml --tags zsh -K
 ```
 
 Or use role tags directly:
@@ -36,6 +57,7 @@ ansible-playbook -i inventory.yml playbook.yml -e "role=keyd"
 ansible-playbook -i inventory.yml playbook.yml -e "role=mouseless"
 ansible-playbook -i inventory.yml playbook.yml -e "role=mouseless-click"
 ansible-playbook -i inventory.yml playbook.yml -e "role=lazyvim"
+ansible-playbook -i inventory.yml playbook.yml -e "role=zsh"
 ```
 
 ## Roles
@@ -76,6 +98,32 @@ It has its own entrypoint, `mouseless-solo.yml`. Mutually exclusive with `mousel
 
 ### lazyvim
 Clones LazyVim configuration from a Git repository via SSH and backs up existing Neovim config.
+
+### zsh
+Recreates the zsh setup from LinuxBeginnings/Hyprland-Dots (its installer,
+`Arch-Hyprland/install-scripts/zsh.sh`): Oh My Zsh with the `gnzh` theme (upstream uses `agnosterzak`),
+`zsh-autosuggestions` and `zsh-syntax-highlighting`, `lsd` aliases, fzf Ctrl+R history,
+and fastfetch on start. Then sets zsh as your login shell.
+
+Installs packages with pacman, clones Oh My Zsh and the plugins over HTTPS, and copies
+`.zshrc`, `.zprofile` and 7 extra themes from `roles/zsh/files/`. Existing dotfiles are
+backed up with a timestamp suffix.
+
+Differences from upstream:
+- Git clones instead of `curl | sh`, so re-runs are safe. Oh My Zsh is never pulled by
+  the role; it updates itself.
+- Extra themes go in `~/.oh-my-zsh/custom/themes`, keeping the Oh My Zsh checkout clean.
+- fastfetch uses Hyprland-Dots' `config-compact.jsonc` only if it exists, so shells
+  don't error on machines without those dots (e.g. WSL).
+- `mercurial` is not installed; nothing in the config uses it.
+- Inside Windows Terminal (`$WT_SESSION` set), `.zshrc` swaps palette blue for One Half
+  Dark's `#61AFEF` via OSC 4. Campbell's `#0037DA` is unreadable on a dark background, and
+  gnzh draws the current directory in blue. Only the blue changes, so the terminal
+  keeps its own background, and other terminals are untouched.
+- Activates [mise](https://mise.jdx.dev) when `~/.local/bin/mise` exists.
+
+The theme draws powerline glyphs, so the terminal needs a Nerd Font. On WSL that is set
+in Windows Terminal, not in Linux.
 
 ## What it does
 
@@ -249,6 +297,13 @@ ansible-playbook -i inventory.yml playbook.yml --tags mouseless-click --skip-tag
 - `lazyvim_backup_data` - Whether to backup data directories (default: `true`)
 
 **Note:** Requires SSH key loaded in agent (`ssh-add`) for git@github.com access.
+
+### zsh
+- `zsh_packages` - pacman packages to install
+- `zsh_omz_repo_url` - Oh My Zsh repository (default: `https://github.com/ohmyzsh/ohmyzsh.git`)
+- `zsh_omz_dir` - Oh My Zsh install path (default: `~/.oh-my-zsh`)
+- `zsh_plugins` - list of `{name, repo}` cloned into `custom/plugins`
+- `zsh_set_default_shell` - Make zsh the login shell (default: `true`)
 
 Example with custom repo:
 ```bash

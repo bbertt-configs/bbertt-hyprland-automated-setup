@@ -1,0 +1,18 @@
+---
+# Arch Linux on WSL2: shell and editor only.
+#
+# The Hyprland, keyd, mouseless and flatpak roles in playbook.yml assume a real
+# desktop session and input devices, so none of them belong here.
+#
+#   make arch-wsl
+#   ansible-playbook -i inventory.yml arch-wsl.yml -K
+
+- name: Setup Arch Linux on WSL
+  hosts: localhost
+  connection: local
+  gather_facts: true
+  become: false
+
+  roles:
+    - { role: zsh, tags: [zsh] }
+    - { role: lazyvim, tags: [lazyvim] }

@@ -1,0 +1,74 @@
+#!/usr/bin/env bash
+# Print one Mouseless exclusion entry per line for every currently-connected
+# physical keyboard.
+#
+# Why not just list everything /proc/bus/input/devices calls a keyboard: that file's
+# handler list is not a reliable classifier (Power Button, Video Bus and ASUS WMI
+# hotkeys all register a "kbd" handler). udev's ID_INPUT_KEYBOARD property is the
+# same signal libinput/Xorg/Wayland compositors use to decide what is actually a
+# keyboard, so we ask udevadm per event node instead.
+#
+# jbensmann/mouseless registers its own virtual "mouseless keyboard" (vendor 4711)
+# and Sonuscape's own virtual devices use vendor 736e -- both must be skipped, or
+# the exclusion list would exclude jbensmann's output device (breaking the whole
+# coexistence scheme) or self-exclude Sonuscape's own input.
+#
+# Output: one entry per line, "ids:VVVV:PPPP" normally, or the device Name when
+# vendor or product is 0000 (see the zero-guard note below). Sorted and deduped.
+
+set -uo pipefail
+
+JBENSMANN_VENDOR="4711"
+SONUSCAPE_VENDOR="736e"
+PROC_DEVICES=/proc/bus/input/devices
+
+is_keyboard() {
+    udevadm info --query=property --name="$1" 2>/dev/null | grep -q '^ID_INPUT_KEYBOARD=1$'
+}
+
+for dev in /dev/input/event*; do
+    [ -e "$dev" ] || continue
+    is_keyboard "$dev" || continue
+
+    node=$(basename "$dev")
+
+    # Map the event node back to its /proc/bus/input/devices record. Records are
+    # blank-line separated; match the H: Handlers= line on the node as a whole
+    # word so "event3" doesn't also match "event30".
+    record=$(awk -v RS='' -v node="$node" '
+        {
+            handlers = ""
+            n = split($0, lines, "\n")
+            for (i = 1; i <= n; i++) {
+                if (lines[i] ~ /^H: Handlers=/) { handlers = lines[i] }
+            }
+            if (handlers != "") {
+                split(handlers, toks, " ")
+                for (i = 1; i <= length(toks); i++) {
+                    if (toks[i] == node) { print; exit }
+                }
+            }
+        }
+    ' "$PROC_DEVICES")
+
+    [ -n "$record" ] || continue
+
+    vendor=$(printf '%s\n' "$record" | sed -n 's/^I: .*Vendor=\([0-9a-fA-F]\{4\}\).*/\1/p' | tr 'A-F' 'a-f')
+    product=$(printf '%s\n' "$record" | sed -n 's/^I: .*Product=\([0-9a-fA-F]\{4\}\).*/\1/p' | tr 'A-F' 'a-f')
+    name=$(printf '%s\n' "$record" | sed -n 's/^N: Name="\(.*\)"$/\1/p')
+
+    [ -n "$vendor" ] && [ -n "$product" ] || continue
+
+    case "$vendor" in
+        "$JBENSMANN_VENDOR"|"$SONUSCAPE_VENDOR") continue ;;
+    esac
+
+    # Zero guard: "0" on either side of an ids: entry is a wildcard, so
+    # ids:0000:xxxx would match every device including jbensmann's virtual
+    # keyboard, leaving Sonuscape with no input at all. Fall back to the name.
+    if [ "$vendor" = "0000" ] || [ "$product" = "0000" ]; then
+        [ -n "$name" ] && printf '%s\n' "$name"
+    else
+        printf 'ids:%s:%s\n' "$vendor" "$product"
+    fi
+done | sort -u

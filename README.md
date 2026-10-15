@@ -42,7 +42,6 @@ Run a specific role only:
 ```bash
 ansible-playbook -i inventory.yml playbook.yml --tags hyprlink
 ansible-playbook -i inventory.yml playbook.yml --tags kitty
-ansible-playbook -i inventory.yml playbook.yml --tags keyd
 ansible-playbook -i inventory.yml playbook.yml --tags mouseless
 ansible-playbook -i inventory.yml playbook.yml --tags mouseless-click
 ansible-playbook -i inventory.yml playbook.yml --tags lazyvim
@@ -53,7 +52,6 @@ Or use role tags directly:
 ```bash
 ansible-playbook -i inventory.yml playbook.yml -e "role=hyprlink"
 ansible-playbook -i inventory.yml playbook.yml -e "role=kitty"
-ansible-playbook -i inventory.yml playbook.yml -e "role=keyd"
 ansible-playbook -i inventory.yml playbook.yml -e "role=mouseless"
 ansible-playbook -i inventory.yml playbook.yml -e "role=mouseless-click"
 ansible-playbook -i inventory.yml playbook.yml -e "role=lazyvim"
@@ -68,9 +66,6 @@ Clones Hyprland dotfiles repository and creates a symbolic link from `~/.config/
 ### kitty
 Copies `kitty.conf` and `custom.conf` from `roles/kitty/files/` to `~/.config/kitty/`.
 
-### keyd
-Installs `keyd` via yay (AUR) and configures global vim-style navigation by holding Caps Lock as a modifier layer.
-
 ### mouseless
 Deploys jbensmann/mouseless config — the CapsLock nav layer (`hjkl`/`np` -> arrow keys) and nothing else.
 
@@ -79,11 +74,20 @@ narrowed to key remapping so the two can run together; see **Running both togeth
 
 ### mouseless-click
 Installs Sonuscape Mouseless (`mouseless.click`, app id `net.sonuscape.mouseless`) as a
-user flatpak and registers a Hyprland `exec-once` autostart.
+user flatpak and registers a Hyprland `exec-once` autostart that launches it through a
+wrapper script instead of `flatpak run` directly.
 
 Adds both the `sonuscape` remote and `flathub` — the vendor repo hosts only the app and
 its Locale extension, so the `org.gnome.Platform/50` runtime it depends on has to come
 from Flathub or the install fails on an unresolved runtime.
+
+Also installs two helper scripts to `~/.local/bin`: `mouseless-devices`, which detects
+currently-connected physical keyboards via udev, and `mouseless-launch`, the autostart
+wrapper that regenerates Sonuscape's keyboard-exclusion list immediately before every
+launch. See **Why Mouseless excludes the physical keyboards** below for the full
+mechanism — this replaced a one-shot, host-specific hardcoded list, and the two-pass
+install (deploy once, then re-run after the app has created its config) it used to
+require is no longer needed.
 
 The app is proprietary and licensed per machine. **Activation is manual** and cannot be
 automated: launch it, then choose *Activate* (not *Start Trial*).
@@ -125,6 +129,13 @@ Differences from upstream:
 The theme draws powerline glyphs, so the terminal needs a Nerd Font. On WSL that is set
 in Windows Terminal, not in Linux.
 
+### keyd (retained, not run)
+`roles/keyd/` is still in the tree but deliberately absent from `playbook.yml`. Key
+remapping belongs to jbensmann/mouseless (the `mouseless` role); running keyd alongside it
+would put two remappers in contention for the same exclusive `EVIOCGRAB` on the physical
+keyboards, and whichever lost would simply be dead. Re-add the role entry to
+`playbook.yml` if you ever want it back.
+
 ## What it does
 
 1. Ensures `~/.config` directory exists
@@ -133,18 +144,17 @@ in Windows Terminal, not in Linux.
 4. Creates symbolic link: `~/.config/hypr` → `hypr/`
 5. Copies `kitty.conf` and `custom.conf` to `~/.config/kitty/`
 6. Backs up existing kitty config files to `.bak`
-7. Installs keyd via yay (AUR)
-8. Deploys keyd default.conf with vim motion layer
-9. Enables and starts keyd service
-10. Installs mouseless via yay (AUR)
-11. Deploys mouseless config.yaml with the CapsLock nav layer
-12. Restarts mouseless user service
-13. Installs flatpak, adds the `flathub` and `sonuscape` remotes
-14. Installs the `net.sonuscape.mouseless` flatpak (user scope)
-15. Adds the Mouseless `exec-once` autostart to Hyprland's `UserConfigs/Startup_Apps.conf`
-16. Backs up existing nvim config to .bak
-17. Optionally backs up nvim data directories
-18. Clones lazyvim configs via SSH
+7. Installs mouseless via yay (AUR)
+8. Deploys mouseless config.yaml with the CapsLock nav layer
+9. Restarts mouseless user service
+10. Installs flatpak, adds the `flathub` and `sonuscape` remotes
+11. Installs the `net.sonuscape.mouseless` flatpak (user scope)
+12. Installs `mouseless-devices` and `mouseless-launch` to `~/.local/bin`, and adds the
+    Mouseless `exec-once` autostart (via `mouseless-launch`) to Hyprland's
+    `UserConfigs/Startup_Apps.conf`
+13. Backs up existing nvim config to .bak
+14. Optionally backs up nvim data directories
+15. Clones lazyvim configs via SSH
 
 ## Running both together
 
@@ -183,29 +193,62 @@ Failed to grab keyboard device   event13: device or resource busy
 ```
 
 Startup order alone cannot fix this, because the race reopens on every replug. The fix is
-`excluded_input_devices` in Mouseless's own config, set by the `mouseless-click` role:
-Mouseless then grabs only jbensmann's `mouseless keyboard`, so jbensmann reliably owns the
-real hardware. Mouseless still sees every keystroke, because jbensmann passes them through
-to that virtual device.
+`excluded_input_devices` in Mouseless's own config: Mouseless then grabs only jbensmann's
+`mouseless keyboard`, so jbensmann reliably owns the real hardware. Mouseless still sees
+every keystroke, because jbensmann passes them through to that virtual device.
 
-Discover the right values on a new machine:
+**The list is auto-generated, not hand-maintained.** `mouseless-devices` (installed to
+`~/.local/bin`) walks `/dev/input/event*`, keeps the ones udev classifies as
+`ID_INPUT_KEYBOARD=1`, and prints an `ids:VVVV:PPPP` entry for each — skipping
+jbensmann's own virtual keyboard (vendor `4711`) and Sonuscape's own virtual devices
+(vendor `736e`) so neither program ends up excluding itself. `mouseless-launch`, the
+script the Hyprland autostart actually runs, calls it and merges the result into
+`config.yaml` every time Sonuscape is about to launch:
 
-```bash
-flatpak run net.sonuscape.mouseless --list-input-devices
-```
+- **Union, not overwrite.** Entries already in the file stay even if that keyboard is
+  currently unplugged, so the list only ever grows to cover every keyboard this machine
+  has ever had connected. An optional `~/.config/mouseless-click/extra-excludes` (see
+  `mouseless_click_excluded_devices` below) is unioned in too, for pinning a device
+  Ansible manages instead of leaving to auto-detection.
+- **Fail-safe validation.** Before writing, any entry that would also match jbensmann's
+  virtual keyboard — a bare substring of `mouseless keyboard`, or an `ids:` entry whose
+  vendor/product use `0`/`0000` as a wildcard against `4711:0815` — is dropped and
+  reported (stderr and `notify-send`). A sticky bad entry here would permanently leave
+  Sonuscape with no input at all and be very hard to diagnose, so this never writes one.
+- **Textual, not YAML-library, rewrite.** The merge edits only the
+  `excluded_input_devices` key in place — as an inline `[]`, an existing block sequence,
+  or appended if the key is missing — so every comment, key order, and setting made in
+  Sonuscape's own config editor survives untouched.
 
-Entries match by case-insensitive name substring, or by id (`ids:VVVV:PPPP`). Keep them
-specific enough not to also match `mouseless keyboard` — that would leave Mouseless with no
-input at all. Override `mouseless_click_excluded_devices` per host.
+**Why the merge happens in the launch wrapper, immediately before `flatpak run`:**
+Sonuscape reads `config.yaml` once at startup and rewrites the whole file from memory
+when it quits. That means editing it while Sonuscape is running is pointless — it will
+be clobbered on exit — and editing it right after Ansible finishes is unsafe on a fresh
+install, because the file doesn't exist until the app has run at least once. Pre-launch
+is the only window that is both safe and guaranteed to exist.
 
 The tradeoff is deliberate: with the physical keyboards excluded, Mouseless depends on
 jbensmann running. If jbensmann dies, Mouseless has no input source. `SUPER+CTRL+ALT+R`
-restarts jbensmann and is a Hyprland bind, so it keeps working in that state.
+restarts jbensmann and is a Hyprland bind, so it keeps working in that state; if
+Sonuscape isn't already running when it finishes, it also relaunches it (through
+`mouseless-launch`, so the exclusion list gets regenerated).
 
-Mouseless caches its config in memory and writes it on exit, so a running instance will
-overwrite the file when it quits. Apply changes by quitting it from its own UI (tap Left
-Shift, then Tab) and relaunching — the role only rewrites the empty default, so it never
-clobbers settings made in the app's own editor.
+#### Hotplugging a keyboard Mouseless has never seen before
+
+Both programs watch for new devices — jbensmann via `fsnotify` on `/dev/input` — so
+plugging in a keyboard for the first time after login is a race, exactly like the
+startup race above:
+
+- If jbensmann wins, everything is correct, and `mouseless-devices` will pick that
+  keyboard up on Sonuscape's next launch.
+- If Sonuscape wins, that one keyboard loses the CapsLock nav layer but keeps typing
+  normally (Sonuscape re-emits keystrokes through its own virtual keyboard); the
+  built-in keyboard is unaffected, and mouse control keeps working throughout.
+
+Recovery: quit Sonuscape from its own UI (tap Left Shift, then Tab), then press
+`SUPER+CTRL+ALT+R`. jbensmann restarts and grabs the new keyboard, the exclusion list
+regenerates to include it, and Sonuscape relaunches automatically with the updated
+list. Because the list accumulates, this can only happen once per keyboard.
 
 ### Role order matters
 
@@ -260,11 +303,6 @@ Override defaults in `roles/<role>/defaults/main.yml` or pass via CLI:
 - `kitty_config_target` - Target directory (default: `~/.config/kitty`)
 - `kitty_backup_suffix` - Backup suffix for existing files (default: `.bak`)
 
-### keyd
-- `keyd_package` - Package name to install (default: `keyd`)
-- `keyd_config_src` - Source path for default.conf
-- `keyd_config_dest` - Target path for default.conf (default: `/etc/keyd/default.conf`)
-
 ### mouseless
 - `mouseless_config_src` - Source path for config.yaml
 - `mouseless_config_dest` - Target path for config.yaml (default: `~/.config/mouseless/config.yaml`)
@@ -277,6 +315,11 @@ Override defaults in `roles/<role>/defaults/main.yml` or pass via CLI:
 - `mouseless_click_startup_file` - Hyprland startup config to manage (default: `~/.config/hypr/UserConfigs/Startup_Apps.conf`)
 - `mouseless_click_wait_device` - uinput device to wait for (default: `mouseless keyboard`)
 - `mouseless_click_wait_timeout` - seconds to wait before giving up (default: `30`)
+- `mouseless_click_devices_script_src` / `_dest` - `mouseless-devices` helper (default dest: `~/.local/bin/mouseless-devices`)
+- `mouseless_click_launch_script_src` / `_dest` - `mouseless-launch` autostart wrapper (default dest: `~/.local/bin/mouseless-launch`)
+- `mouseless_click_refresh_script_src` / `_dest` - `mouseless-refresh` helper (default dest: `~/.local/bin/mouseless-refresh`)
+- `mouseless_click_extra_excludes_file` - Always-on extra exclusions, unioned in by `mouseless-launch` (default: `~/.config/mouseless-click/extra-excludes`)
+- `mouseless_click_excluded_devices` - Extra entries written to that file (default: `[]`, i.e. rely entirely on auto-detection). See **Why Mouseless excludes the physical keyboards** above.
 
 Skip the package install where flatpak is provisioned elsewhere:
 ```bash

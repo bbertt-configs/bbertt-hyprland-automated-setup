@@ -11,11 +11,26 @@
 # Restarting jbensmann reclaims any device nothing else holds. If Mouseless already
 # holds one, only quitting Mouseless releases it, so this reports that explicitly
 # rather than pretending to have fixed it.
+#
+# Once jbensmann has reclaimed everything, this also relaunches Sonuscape Mouseless
+# if it isn't running -- e.g. after the user quit it from its own UI to free up a
+# device. Relaunching goes through mouseless-launch, which regenerates the exclusion
+# list first, so the newly-reclaimed keyboard is excluded from now on. This never
+# kills or signals a running instance: signalling the flatpak can corrupt its config
+# on shutdown, so it only ever starts one that is already stopped.
 
 set -uo pipefail
 
 UNIT=mouseless.service
 APP_NAME="Mouseless layers"
+LAUNCH_BIN="$HOME/.local/bin/mouseless-launch"
+
+# Robust against the wrapper script or this very pgrep call matching themselves:
+# pgrep excludes its own PID by default, and neither this script's nor pgrep's own
+# argv contains the app id.
+sonuscape_running() {
+    pgrep -f 'net\.sonuscape\.mouseless' >/dev/null 2>&1
+}
 
 say() {
     printf '%s\n' "$2"
@@ -84,8 +99,16 @@ if [ -n "$failed_names" ]; then
 "Restarted, but could not grab:
 ${detail}
 Quit Mouseless from its own UI (tap Left Shift, then Tab), then run this again.
-Do not kill it -- signalling the flatpak can corrupt its config."
+Do not kill it -- signalling the flatpak can corrupt its config.
+Pressing this bind again afterwards will also relaunch Mouseless with the
+updated exclusion list."
     exit 1
 fi
 
 say "Layers refreshed" "$grabbed keyboard device(s) grabbed. CapsLock nav is active."
+
+# Sonuscape isn't touched if it's already running -- only started when it's stopped.
+if ! sonuscape_running && [ -x "$LAUNCH_BIN" ]; then
+    setsid nohup "$LAUNCH_BIN" >/dev/null 2>&1 < /dev/null &
+    disown
+fi

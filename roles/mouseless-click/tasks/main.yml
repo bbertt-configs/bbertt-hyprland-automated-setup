@@ -45,6 +45,10 @@
 # uinput device is deterministic, unlike a fixed sleep. If jbensmann never comes up the
 # loop times out and Mouseless grabs the physical keyboards directly — degrading to
 # "no CapsLock arrows" rather than "no mouse control at all".
+#
+# Launches through mouseless-launch rather than `flatpak run` directly, so the
+# exclusion list is regenerated immediately before every launch — see that script
+# and defaults/main.yml for why that has to happen there.
 - name: Configure Mouseless autostart in Hyprland
   tags: [mouseless-click]
   ansible.builtin.blockinfile:
@@ -53,7 +57,7 @@
     create: true
     mode: '0644'
     block: |
-      exec-once = sh -c 'for i in $(seq 1 {{ mouseless_click_wait_timeout }}); do grep -q "{{ mouseless_click_wait_device }}" /proc/bus/input/devices && break; sleep 1; done; flatpak run {{ mouseless_click_app_id }}'
+      exec-once = sh -c 'for i in $(seq 1 {{ mouseless_click_wait_timeout }}); do grep -q "{{ mouseless_click_wait_device }}" /proc/bus/input/devices && break; sleep 1; done; {{ mouseless_click_launch_script_dest }}'
 
 - name: Ensure ~/.local/bin exists
   tags: [mouseless-click]
@@ -69,6 +73,47 @@
     dest: "{{ mouseless_click_refresh_script_dest }}"
     mode: '0755'
 
+# mouseless-devices classifies currently-connected physical keyboards via udev;
+# mouseless-launch runs it before every Sonuscape launch to keep the exclusion list
+# current without ever touching config.yaml while Sonuscape is running.
+- name: Install mouseless device-detection helper
+  tags: [mouseless-click]
+  ansible.builtin.copy:
+    src: "{{ mouseless_click_devices_script_src }}"
+    dest: "{{ mouseless_click_devices_script_dest }}"
+    mode: '0755'
+
+- name: Install mouseless launch wrapper
+  tags: [mouseless-click]
+  ansible.builtin.copy:
+    src: "{{ mouseless_click_launch_script_src }}"
+    dest: "{{ mouseless_click_launch_script_dest }}"
+    mode: '0755'
+
+- name: Ensure mouseless-click config directory exists
+  tags: [mouseless-click]
+  ansible.builtin.file:
+    path: "{{ mouseless_click_extra_excludes_file | dirname }}"
+    state: directory
+    mode: '0755'
+
+# Always-on extra exclusions, unioned in by mouseless-launch alongside whatever it
+# auto-detects. Ansible owns this file outright (unlike Sonuscape's own config.yaml,
+# which it never touches once populated), so a plain content-diffing copy is enough.
+- name: Deploy extra-excludes list for mouseless-launch
+  tags: [mouseless-click]
+  ansible.builtin.copy:
+    dest: "{{ mouseless_click_extra_excludes_file }}"
+    mode: '0644'
+    content: |
+      # ANSIBLE MANAGED — regenerated on every run of the mouseless-click role.
+      # Always-excluded entries, unioned by mouseless-launch into Sonuscape's
+      # excluded_input_devices alongside whatever it auto-detects. One entry per
+      # line; blank lines and lines starting with # are ignored.
+      {% for d in mouseless_click_excluded_devices %}
+      {{ d }}
+      {% endfor %}
+
 # UserKeybinds.conf is the file the dotfiles explicitly reserve for user binds, and
 # hyprland.conf already sources it. Managed with blockinfile because hyprlink force
 # updates that repo, which would otherwise drop the bind.
@@ -81,28 +126,3 @@
     mode: '0644'
     block: |
       bindd = {{ mouseless_click_refresh_bind }}, refresh mouseless layers, exec, {{ mouseless_click_refresh_script_dest }}
-
-# Only rewrites the empty default, so it provisions a fresh install without ever
-# clobbering settings made in the app's own config editor. Mouseless owns this file;
-# Ansible deliberately does not manage the rest of it.
-- name: Exclude physical keyboards from Mouseless grabs
-  tags: [mouseless-click]
-  when: mouseless_click_excluded_devices | length > 0
-  ansible.builtin.replace:
-    path: "{{ mouseless_click_config }}"
-    regexp: '^excluded_input_devices: \[\]$'
-    replace: |-
-      excluded_input_devices:
-      {% for d in mouseless_click_excluded_devices %}
-      - {{ d }}
-      {% endfor %}
-  register: mouseless_click_exclusions
-
-- name: Note that Mouseless must restart to apply exclusions
-  tags: [mouseless-click]
-  when: mouseless_click_exclusions.changed
-  ansible.builtin.debug:
-    msg: >-
-      Device exclusions written. Mouseless caches its config in memory and saves on
-      exit, so a running instance will overwrite this file when it quits. Quit it from
-      its own UI (tap Left Shift, then Tab) and relaunch, or log out and back in.

@@ -38,6 +38,18 @@ mouseless_click_keybind_file: "{{ ansible_user_dir }}/.config/hypr/UserConfigs/U
 mouseless_click_keybind_marker: "# {mark} ANSIBLE MANAGED — mouseless refresh keybind"
 mouseless_click_refresh_bind: "$mainMod CTRL ALT, R"
 
+# mouseless-devices prints one exclusion entry (ids:VVVV:PPPP, or the device Name
+# when udev reports an all-zero vendor/product) per currently-connected physical
+# keyboard, detected via udev's ID_INPUT_KEYBOARD property. mouseless-launch runs it
+# immediately before every Sonuscape launch and unions the result into
+# excluded_input_devices -- see the launcher itself and the "Why Mouseless excludes
+# the physical keyboards" section of the README for the full mechanism and why the
+# merge has to happen there instead of via Ansible.
+mouseless_click_devices_script_src: files/mouseless-devices
+mouseless_click_devices_script_dest: "{{ ansible_user_dir }}/.local/bin/mouseless-devices"
+mouseless_click_launch_script_src: files/mouseless-launch
+mouseless_click_launch_script_dest: "{{ ansible_user_dir }}/.local/bin/mouseless-launch"
+
 # Mouseless grabs every keyboard it classifies as one, including newly hotplugged
 # ones and jbensmann's virtual output. Excluding the PHYSICAL keyboards leaves it
 # grabbing only jbensmann's "mouseless keyboard", so jbensmann reliably owns the
@@ -45,11 +57,18 @@ mouseless_click_refresh_bind: "$mainMod CTRL ALT, R"
 # replugged. Mouseless still sees every keystroke, because jbensmann passes them
 # through to that virtual device.
 #
+# Detection is automatic now (mouseless-devices, above) and accumulates in
+# Mouseless's own config, so this list is no longer the primary mechanism -- it's
+# an EXTRA, always-on set of entries the launcher unions in alongside what it
+# detects. Use it to pin a device that isn't reliably classified as a keyboard, or
+# one you want excluded even when unplugged. Written to
+# ~/.config/mouseless-click/extra-excludes and read by mouseless-launch on every
+# launch.
+#
 # Entries match by case-insensitive name substring, or by id (ids:VVVV:PPPP).
 # Discover values with: flatpak run net.sonuscape.mouseless --list-input-devices
-# HOST-SPECIFIC — override per machine. Keep entries specific enough not to also
-# match "mouseless keyboard", or Mouseless is left with no input at all.
-mouseless_click_config: "{{ ansible_user_dir }}/.var/app/net.sonuscape.mouseless/data/mouseless/configs/config.yaml"
-mouseless_click_excluded_devices:
-  - AT Translated Set 2 keyboard
-  - AULA-F75
+# Keep entries specific enough not to also match "mouseless keyboard" -- the
+# launcher's fail-safe validation drops any entry that would, but it's still worth
+# getting right, since a dropped entry excludes nothing.
+mouseless_click_extra_excludes_file: "{{ ansible_user_dir }}/.config/mouseless-click/extra-excludes"
+mouseless_click_excluded_devices: []

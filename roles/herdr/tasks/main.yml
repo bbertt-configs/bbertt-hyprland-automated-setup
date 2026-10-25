@@ -1,0 +1,34 @@
+---
+# Installs herdr through mise (requires the mise role) and deploys config.toml.
+# Only herdr is added to the global mise config; other tools there are left alone.
+
+- name: Check whether herdr is in the global mise config
+  tags: [herdr]
+  ansible.builtin.command:
+    cmd: grep -qE '^herdr[[:space:]]*=' "{{ herdr_mise_global_config }}"
+  register: herdr_in_mise
+  changed_when: false
+  check_mode: false
+  failed_when: false
+
+- name: Install herdr with mise
+  tags: [herdr]
+  ansible.builtin.command:
+    cmd: "{{ herdr_mise_bin }} use --global herdr@{{ herdr_version }}"
+  when: herdr_in_mise.rc != 0
+
+- name: Ensure ~/.config/herdr directory exists
+  tags: [herdr]
+  ansible.builtin.file:
+    path: "{{ herdr_config_dir }}"
+    state: directory
+    mode: '0755'
+
+- name: Copy herdr config.toml to target system
+  tags: [herdr]
+  ansible.builtin.copy:
+    src: config.toml
+    dest: "{{ herdr_config_dir }}/config.toml"
+    mode: '0644'
+    backup: true
+  notify: Reload herdr config

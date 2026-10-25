@@ -1,0 +1,5 @@
+---
+herdr_version: latest
+herdr_mise_bin: "{{ ansible_user_dir }}/.local/bin/mise"
+herdr_mise_global_config: "{{ ansible_user_dir }}/.config/mise/config.toml"
+herdr_config_dir: "{{ ansible_user_dir }}/.config/herdr"

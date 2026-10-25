@@ -1,0 +1,6 @@
+---
+# Applies the new config to a running herdr server; does nothing if none is running.
+- name: Reload herdr config
+  ansible.builtin.command:
+    cmd: "{{ herdr_mise_bin }} exec -- herdr server reload-config"
+  failed_when: false

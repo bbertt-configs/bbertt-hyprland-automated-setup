@@ -1,0 +1,28 @@
+---
+# The plain installer, not https://mise.run/zsh: that variant appends an
+# activation line to ~/.zshrc, which the zsh role overwrites on every run, so
+# it would be re-added each time. The managed .zshrc already activates mise.
+
+- name: Install mise packages
+  tags: [mise, packages]
+  become: true
+  community.general.pacman:
+    name: "{{ mise_packages }}"
+    state: present
+
+# creates: — mise updates itself with `mise self-update`.
+- name: Install mise
+  tags: [mise]
+  ansible.builtin.shell:
+    cmd: set -o pipefail && curl -fsSL "{{ mise_install_url }}" | sh
+    executable: /bin/bash
+    creates: "{{ mise_bin }}"
+  environment:
+    MISE_INSTALL_PATH: "{{ mise_bin }}"
+
+# The managed .zshrc adds this directory to fpath before Oh My Zsh runs compinit.
+- name: Install mise zsh completion
+  tags: [mise]
+  ansible.builtin.command:
+    cmd: "{{ mise_bin }} completion zsh --install"
+    creates: "{{ mise_zsh_completion }}"

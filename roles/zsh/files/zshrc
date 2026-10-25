@@ -23,6 +23,10 @@ plugins=(
     zsh-syntax-highlighting
 )
 
+# Completions installed per user (mise completion zsh --install). Must be on
+# fpath before Oh My Zsh runs compinit.
+fpath+=("$HOME/.local/share/zsh/site-functions")
+
 source $ZSH/oh-my-zsh.sh
 
 # Check archlinux plugin commands here

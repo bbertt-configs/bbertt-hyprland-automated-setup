@@ -14,6 +14,9 @@
   become: false
 
   roles:
+    - { role: mise, tags: [mise] }
     - { role: zsh, tags: [zsh] }
     - { role: lazyvim, tags: [lazyvim] }
     - { role: tmux, tags: [tmux] }
+    # Must run after mise, which installs herdr.
+    - { role: herdr, tags: [herdr] }

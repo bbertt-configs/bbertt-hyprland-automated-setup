@@ -18,7 +18,7 @@ RUN = $(ANSIBLE) -i $(INVENTORY) $(BECOME) $(if $(TAGS),--tags $(TAGS)) $(ARGS)
 
 help:
 	@echo "Targets:"
-	@echo "  arch-wsl        Arch on WSL2: zsh, lazyvim, tmux    (arch-wsl.yml)"
+	@echo "  arch-wsl        Arch on WSL2: mise, zsh, lazyvim, tmux, herdr (arch-wsl.yml)"
 	@echo "  arch-hyprland   Arch desktop with Hyprland, all roles (playbook.yml)"
 	@echo "  mouseless-solo  Revert to standalone jbensmann/mouseless (mouseless-solo.yml)"
 	@echo "  check           Syntax-check every playbook"

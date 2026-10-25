@@ -13,7 +13,7 @@ Targets prompt for your sudo password (`-K`) since some roles install packages.
 
 | Command              | Playbook            | Roles                                    |
 |----------------------|---------------------|------------------------------------------|
-| `make arch-wsl`      | `arch-wsl.yml`      | zsh, lazyvim, tmux                       |
+| `make arch-wsl`      | `arch-wsl.yml`      | mise, zsh, lazyvim, tmux, herdr          |
 | `make arch-hyprland` | `playbook.yml`      | all roles below except `mouseless-solo`  |
 | `make mouseless-solo`| `mouseless-solo.yml`| mouseless-solo                           |
 | `make check`         | all                 | syntax check only                        |
@@ -47,6 +47,8 @@ ansible-playbook -i inventory.yml playbook.yml --tags mouseless-click
 ansible-playbook -i inventory.yml playbook.yml --tags lazyvim
 ansible-playbook -i inventory.yml playbook.yml --tags zsh -K
 ansible-playbook -i inventory.yml playbook.yml --tags tmux -K
+ansible-playbook -i inventory.yml playbook.yml --tags mise -K
+ansible-playbook -i inventory.yml playbook.yml --tags herdr
 ```
 
 Or use role tags directly:
@@ -58,6 +60,8 @@ ansible-playbook -i inventory.yml playbook.yml -e "role=mouseless-click"
 ansible-playbook -i inventory.yml playbook.yml -e "role=lazyvim"
 ansible-playbook -i inventory.yml playbook.yml -e "role=zsh"
 ansible-playbook -i inventory.yml playbook.yml -e "role=tmux"
+ansible-playbook -i inventory.yml playbook.yml -e "role=mise"
+ansible-playbook -i inventory.yml playbook.yml -e "role=herdr"
 ```
 
 ## Roles
@@ -126,7 +130,8 @@ Differences from upstream:
   Dark's `#61AFEF` via OSC 4. Campbell's `#0037DA` is unreadable on a dark background, and
   gnzh draws the current directory in blue. Only the blue changes, so the terminal
   keeps its own background, and other terminals are untouched.
-- Activates [mise](https://mise.jdx.dev) when `~/.local/bin/mise` exists.
+- Activates [mise](https://mise.jdx.dev) when `~/.local/bin/mise` exists, and adds
+  `~/.local/share/zsh/site-functions` to `fpath` for its completions.
 
 The theme draws powerline glyphs, so the terminal needs a Nerd Font. On WSL that is set
 in Windows Terminal, not in Linux.
@@ -148,6 +153,25 @@ Customizations in `tmux.conf.local`:
 - vi copy mode, `y` copies with `wl-copy`, mouse on.
 
 tmux reads `~/.tmux.conf` before `~/.config/tmux/tmux.conf`; the role warns if one exists.
+
+### mise
+Installs [mise](https://mise.jdx.dev) with the standalone installer to `~/.local/bin/mise`
+and its zsh completion to `~/.local/share/zsh/site-functions/_mise`. Skipped if already
+installed; mise updates itself with `mise self-update`.
+
+Uses `https://mise.run` rather than `https://mise.run/zsh`: the zsh variant appends an
+activation line to `~/.zshrc`, which the zsh role overwrites on every run. The managed
+`.zshrc` already activates mise and puts the completion directory on `fpath`.
+
+### herdr
+Installs [herdr](https://herdr.dev) through mise (`mise use --global herdr@latest`) and
+copies `roles/herdr/files/config.toml` to `~/.config/herdr/`, backing up the existing one.
+Only adds herdr to `~/.config/mise/config.toml`; other tools there are left alone, and
+herdr is not re-added if it's already listed. A running herdr server reloads the config.
+
+Config: Dracula theme, and `prefix` + `Alt` + `1..9` switches workspaces.
+
+Must run after `mise`.
 
 ### keyd (retained, not run)
 `roles/keyd/` is still in the tree but deliberately absent from `playbook.yml`. Key
@@ -373,6 +397,18 @@ ansible-playbook -i inventory.yml playbook.yml --tags mouseless-click --skip-tag
 - `tmux_omt_repo_url` - Oh my tmux! repository (default: `https://github.com/gpakosz/.tmux.git`)
 - `tmux_omt_dir` - Oh my tmux! clone path (default: `~/.local/share/tmux/oh-my-tmux`)
 - `tmux_config_dir` - tmux config directory (default: `~/.config/tmux`)
+
+### mise
+- `mise_packages` - pacman packages to install (default: `curl`)
+- `mise_install_url` - Installer script (default: `https://mise.run`)
+- `mise_bin` - Install path (default: `~/.local/bin/mise`)
+- `mise_zsh_completion` - Completion file the role checks for (default: `~/.local/share/zsh/site-functions/_mise`)
+
+### herdr
+- `herdr_version` - Version passed to `mise use` (default: `latest`)
+- `herdr_mise_bin` - mise binary (default: `~/.local/bin/mise`)
+- `herdr_mise_global_config` - Global mise config checked for herdr (default: `~/.config/mise/config.toml`)
+- `herdr_config_dir` - herdr config directory (default: `~/.config/herdr`)
 
 Example with custom repo:
 ```bash

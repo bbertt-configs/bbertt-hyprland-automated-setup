@@ -1,0 +1,6 @@
+---
+mise_packages:
+  - curl
+mise_install_url: https://mise.run
+mise_bin: "{{ ansible_user_dir }}/.local/bin/mise"
+mise_zsh_completion: "{{ ansible_user_dir }}/.local/share/zsh/site-functions/_mise"

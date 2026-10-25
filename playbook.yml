@@ -14,5 +14,8 @@
     - { role: mouseless-click, tags: [mouseless-click] }
     - { role: wl-kbptr, tags: [wl-kbptr] }
     - { role: lazyvim, tags: [lazyvim] }
+    - { role: mise, tags: [mise] }
     - { role: zsh, tags: [zsh] }
     - { role: tmux, tags: [tmux] }
+    # Must run after mise, which installs herdr.
+    - { role: herdr, tags: [herdr] }

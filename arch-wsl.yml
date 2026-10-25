@@ -16,3 +16,4 @@
   roles:
     - { role: zsh, tags: [zsh] }
     - { role: lazyvim, tags: [lazyvim] }
+    - { role: tmux, tags: [tmux] }

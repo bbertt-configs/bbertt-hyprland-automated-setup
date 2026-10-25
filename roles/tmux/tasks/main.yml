@@ -1,0 +1,69 @@
+---
+# Oh my tmux! (gpakosz/.tmux) in its XDG layout: the upstream .tmux.conf is
+# symlinked to ~/.config/tmux/tmux.conf, and our customizations live next to it
+# in tmux.conf.local.
+
+- name: Install tmux packages
+  tags: [tmux, packages]
+  become: true
+  community.general.pacman:
+    name: "{{ tmux_packages }}"
+    state: present
+
+# update: false — pulling on every run could change the base config under us.
+- name: Clone Oh my tmux!
+  tags: [tmux]
+  ansible.builtin.git:
+    repo: "{{ tmux_omt_repo_url }}"
+    dest: "{{ tmux_omt_dir }}"
+    depth: 1
+    update: false
+
+- name: Ensure ~/.config/tmux directory exists
+  tags: [tmux]
+  ansible.builtin.file:
+    path: "{{ tmux_config_dir }}"
+    state: directory
+    mode: '0755'
+
+- name: Check existing tmux.conf
+  tags: [tmux]
+  ansible.builtin.stat:
+    path: "{{ tmux_config_dir }}/tmux.conf"
+  register: tmux_conf_stat
+
+- name: Backup existing tmux.conf
+  tags: [tmux]
+  ansible.builtin.command:
+    cmd: mv "{{ tmux_config_dir }}/tmux.conf" "{{ tmux_config_dir }}/tmux.conf.{{ ansible_date_time.epoch }}.bak"
+  when: tmux_conf_stat.stat.exists and not tmux_conf_stat.stat.islnk
+
+- name: Link tmux.conf to Oh my tmux!
+  tags: [tmux]
+  ansible.builtin.file:
+    src: "{{ tmux_omt_dir }}/.tmux.conf"
+    dest: "{{ tmux_config_dir }}/tmux.conf"
+    state: link
+    force: true
+
+- name: Copy tmux.conf.local to target system
+  tags: [tmux]
+  ansible.builtin.copy:
+    src: tmux.conf.local
+    dest: "{{ tmux_config_dir }}/tmux.conf.local"
+    mode: '0644'
+    backup: true
+
+# tmux reads ~/.tmux.conf before ~/.config/tmux/tmux.conf, so one there would
+# silently win over everything above.
+- name: Check for a ~/.tmux.conf that would shadow this config
+  tags: [tmux]
+  ansible.builtin.stat:
+    path: "{{ ansible_user_dir }}/.tmux.conf"
+  register: tmux_home_conf
+
+- name: Warn about ~/.tmux.conf
+  tags: [tmux]
+  ansible.builtin.debug:
+    msg: "Warning: {{ ansible_user_dir }}/.tmux.conf exists and takes precedence over {{ tmux_config_dir }}/tmux.conf. Remove it to use this config."
+  when: tmux_home_conf.stat.exists

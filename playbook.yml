@@ -15,3 +15,4 @@
     - { role: wl-kbptr, tags: [wl-kbptr] }
     - { role: lazyvim, tags: [lazyvim] }
     - { role: zsh, tags: [zsh] }
+    - { role: tmux, tags: [tmux] }

@@ -13,7 +13,7 @@ Targets prompt for your sudo password (`-K`) since some roles install packages.
 
 | Command              | Playbook            | Roles                                    |
 |----------------------|---------------------|------------------------------------------|
-| `make arch-wsl`      | `arch-wsl.yml`      | zsh, lazyvim                             |
+| `make arch-wsl`      | `arch-wsl.yml`      | zsh, lazyvim, tmux                       |
 | `make arch-hyprland` | `playbook.yml`      | all roles below except `mouseless-solo`  |
 | `make mouseless-solo`| `mouseless-solo.yml`| mouseless-solo                           |
 | `make check`         | all                 | syntax check only                        |
@@ -46,6 +46,7 @@ ansible-playbook -i inventory.yml playbook.yml --tags mouseless
 ansible-playbook -i inventory.yml playbook.yml --tags mouseless-click
 ansible-playbook -i inventory.yml playbook.yml --tags lazyvim
 ansible-playbook -i inventory.yml playbook.yml --tags zsh -K
+ansible-playbook -i inventory.yml playbook.yml --tags tmux -K
 ```
 
 Or use role tags directly:
@@ -56,6 +57,7 @@ ansible-playbook -i inventory.yml playbook.yml -e "role=mouseless"
 ansible-playbook -i inventory.yml playbook.yml -e "role=mouseless-click"
 ansible-playbook -i inventory.yml playbook.yml -e "role=lazyvim"
 ansible-playbook -i inventory.yml playbook.yml -e "role=zsh"
+ansible-playbook -i inventory.yml playbook.yml -e "role=tmux"
 ```
 
 ## Roles
@@ -128,6 +130,24 @@ Differences from upstream:
 
 The theme draws powerline glyphs, so the terminal needs a Nerd Font. On WSL that is set
 in Windows Terminal, not in Linux.
+
+### tmux
+Installs tmux and [Oh my tmux!](https://github.com/gpakosz/.tmux) in its XDG layout:
+the upstream `.tmux.conf` is cloned to `~/.local/share/tmux/oh-my-tmux` and symlinked to
+`~/.config/tmux/tmux.conf`, and `roles/tmux/files/tmux.conf.local` is copied next to it.
+An existing `tmux.conf` that isn't a symlink, or an existing `tmux.conf.local`, is backed
+up first. Oh my tmux! is never pulled by the role.
+
+Customizations in `tmux.conf.local`:
+- Dracula colour palette, status bar at the top, no battery indicator.
+- Windows and panes are numbered from 1.
+- Unnamed sessions are numbered from 1: tmux has no base index for sessions, so a
+  `session-created` hook renames them to the lowest free number.
+- `prefix` + `s` sorts sessions by name and numbers its shortcut keys from 1, so
+  `prefix` + `s` + `1` jumps to session 1.
+- vi copy mode, `y` copies with `wl-copy`, mouse on.
+
+tmux reads `~/.tmux.conf` before `~/.config/tmux/tmux.conf`; the role warns if one exists.
 
 ### keyd (retained, not run)
 `roles/keyd/` is still in the tree but deliberately absent from `playbook.yml`. Key
@@ -347,6 +367,12 @@ ansible-playbook -i inventory.yml playbook.yml --tags mouseless-click --skip-tag
 - `zsh_omz_dir` - Oh My Zsh install path (default: `~/.oh-my-zsh`)
 - `zsh_plugins` - list of `{name, repo}` cloned into `custom/plugins`
 - `zsh_set_default_shell` - Make zsh the login shell (default: `true`)
+
+### tmux
+- `tmux_packages` - pacman packages to install (default: `tmux`, `git`)
+- `tmux_omt_repo_url` - Oh my tmux! repository (default: `https://github.com/gpakosz/.tmux.git`)
+- `tmux_omt_dir` - Oh my tmux! clone path (default: `~/.local/share/tmux/oh-my-tmux`)
+- `tmux_config_dir` - tmux config directory (default: `~/.config/tmux`)
 
 Example with custom repo:
 ```bash

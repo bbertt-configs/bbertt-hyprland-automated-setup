@@ -1,0 +1,7 @@
+---
+tmux_packages:
+  - tmux
+  - git
+tmux_omt_repo_url: https://github.com/gpakosz/.tmux.git
+tmux_omt_dir: "{{ ansible_user_dir }}/.local/share/tmux/oh-my-tmux"
+tmux_config_dir: "{{ ansible_user_dir }}/.config/tmux"

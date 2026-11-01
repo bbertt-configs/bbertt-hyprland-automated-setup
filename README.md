@@ -169,7 +169,7 @@ copies `roles/herdr/files/config.toml` to `~/.config/herdr/`, backing up the exi
 Only adds herdr to `~/.config/mise/config.toml`; other tools there are left alone, and
 herdr is not re-added if it's already listed. A running herdr server reloads the config.
 
-Config: Dracula theme, and `prefix` + `Alt` + `1..9` switches workspaces.
+Config: Dracula theme, and `prefix` + `Alt` + `1..9` switches focus between agents.
 
 Must run after `mise`.
 

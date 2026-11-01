@@ -5,4 +5,4 @@ name = "dracula"
 auto_switch = false
 
 [keys]
-switch_workspace = "prefix+alt+1..9"
+focus_agent = "prefix+alt+1..9"

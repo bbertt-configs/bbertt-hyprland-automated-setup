@@ -69,6 +69,11 @@ ansible-playbook -i inventory.yml playbook.yml -e "role=herdr"
 ### hyprlink
 Clones Hyprland dotfiles repository and creates a symbolic link from `~/.config/hypr` to the cloned dotfiles.
 
+Each laptop has its own branch of the dotfiles. The role picks it from the laptop model
+(`/sys/class/dmi/id/product_name`): a name containing `TUF` gets `asus-tuf`, `VivoBook`
+gets `vivobook`, and anything else gets `main`. Override it with
+`-e hypr_repo_version=<branch>`.
+
 ### kitty
 Copies `kitty.conf` and `custom.conf` from `roles/kitty/files/` to `~/.config/kitty/`.
 
@@ -80,8 +85,8 @@ narrowed to key remapping so the two can run together; see **Running both togeth
 
 ### mouseless-click
 Installs Sonuscape Mouseless (`mouseless.click`, app id `net.sonuscape.mouseless`) as a
-user flatpak and registers a Hyprland `exec-once` autostart that launches it through a
-wrapper script instead of `flatpak run` directly.
+user flatpak and registers a Hyprland autostart (`exec_once` in the Lua config) that
+launches it through a wrapper script instead of `flatpak run` directly.
 
 Adds both the `sonuscape` remote and `flathub` — the vendor repo hosts only the app and
 its Locale extension, so the `org.gnome.Platform/50` runtime it depends on has to come
@@ -183,9 +188,9 @@ keyboards, and whichever lost would simply be dead. Re-add the role entry to
 ## What it does
 
 1. Ensures `~/.config` directory exists
-2. Clones the Hyprland dotfiles repository to `hypr/` folder
+2. Clones the Hyprland dotfiles repository (this machine's branch) to `hypr_install_path`
 3. Backs up existing `~/.config/hypr` (if not already a symlink) to `.bak`
-4. Creates symbolic link: `~/.config/hypr` → `hypr/`
+4. Creates symbolic link: `~/.config/hypr` → `hypr_install_path`
 5. Copies `kitty.conf` and `custom.conf` to `~/.config/kitty/`
 6. Backs up existing kitty config files to `.bak`
 7. Installs mouseless via yay (AUR)
@@ -194,8 +199,8 @@ keyboards, and whichever lost would simply be dead. Re-add the role entry to
 10. Installs flatpak, adds the `flathub` and `sonuscape` remotes
 11. Installs the `net.sonuscape.mouseless` flatpak (user scope)
 12. Installs `mouseless-devices` and `mouseless-launch` to `~/.local/bin`, and adds the
-    Mouseless `exec-once` autostart (via `mouseless-launch`) to Hyprland's
-    `UserConfigs/Startup_Apps.conf`
+    Mouseless autostart (via `mouseless-launch`) to Hyprland's
+    `UserConfigs/user_startup.lua` and the refresh bind to `UserConfigs/user_keybinds.lua`
 13. Backs up existing nvim config to .bak
 14. Optionally backs up nvim data directories
 15. Clones lazyvim configs via SSH
@@ -216,7 +221,7 @@ Four things make coexistence work. Only the last is about timing:
    own virtual devices and remaps the keystrokes Mouseless synthesizes — a feedback loop.
 4. **Startup order.** `EVIOCGRAB` is exclusive: whichever starts first owns the physical
    keyboards. jbensmann must win, because without the grab it cannot suppress the original
-   keystroke and `CapsLock+h` would emit both `h` and Left arrow. The `exec-once` therefore
+   keystroke and `CapsLock+h` would emit both `h` and Left arrow. The autostart therefore
    waits for jbensmann's uinput device instead of using a fixed sleep.
 
 If jbensmann never starts, the wait loop times out after 30s and Mouseless grabs the
@@ -299,7 +304,8 @@ list. Because the list accumulates, this can only happen once per keyboard.
 `mouseless-click` must run after `hyprlink`. `hyprlink` does a `force: true` git update of
 the dotfiles repo, which would discard the autostart block; re-adding it afterwards keeps
 the playbook convergent. The block is `blockinfile`-managed, so it is re-applied on every
-run rather than duplicated.
+run rather than duplicated. Both blocks are Lua and call helpers defined by the file
+they land in, so they are appended to the end of existing files and never create one.
 
 ## Reverting to the standalone setup
 
@@ -339,9 +345,12 @@ autostart, so switching back and forth is cheap.
 Override defaults in `roles/<role>/defaults/main.yml` or pass via CLI:
 
 ### hyprlink
-- `hypr_repo_url` - Git repository URL (default: `https://github.com/bbertt-configs/bbertt-hyprland-dotfiles.git`)
-- `hypr_install_path` - Where to clone dotfiles
+- `hypr_repo_url` - Git repository URL (default: `git@github.com:bbertt-configs/bbertt-hyprland-dotfiles.git`)
+- `hypr_install_path` - Where to clone dotfiles (default: `~/Projects/personal/custom-jakoolit-hypr/hypr`)
 - `hypr_config_target` - Symlink target (default: `~/.config/hypr`)
+- `hypr_repo_branches` - Product-name substring → branch map (default: `tuf: asus-tuf`, `vivobook: vivobook`)
+- `hypr_repo_default_branch` - Branch when nothing matches (default: `main`)
+- `hypr_repo_version` - Branch to check out (default: picked from the two above)
 
 ### kitty
 - `kitty_config_target` - Target directory (default: `~/.config/kitty`)
@@ -356,7 +365,9 @@ Override defaults in `roles/<role>/defaults/main.yml` or pass via CLI:
 - `mouseless_click_remote_name` / `mouseless_click_remote_url` - Sonuscape flatpak remote
 - `mouseless_click_flathub_name` / `mouseless_click_flathub_url` - Flathub, for the GNOME runtime
 - `mouseless_click_flatpak_method` - `user` or `system` (default: `user`)
-- `mouseless_click_startup_file` - Hyprland startup config to manage (default: `~/.config/hypr/UserConfigs/Startup_Apps.conf`)
+- `mouseless_click_startup_file` - Hyprland startup config to manage (default: `~/.config/hypr/UserConfigs/user_startup.lua`)
+- `mouseless_click_keybind_file` - Hyprland keybind config to manage (default: `~/.config/hypr/UserConfigs/user_keybinds.lua`)
+- `mouseless_click_refresh_bind_mods` / `_key` - refresh bind combo (default: `SUPER CTRL ALT` + `R`)
 - `mouseless_click_wait_device` - uinput device to wait for (default: `mouseless keyboard`)
 - `mouseless_click_wait_timeout` - seconds to wait before giving up (default: `30`)
 - `mouseless_click_devices_script_src` / `_dest` - `mouseless-devices` helper (default dest: `~/.local/bin/mouseless-devices`)

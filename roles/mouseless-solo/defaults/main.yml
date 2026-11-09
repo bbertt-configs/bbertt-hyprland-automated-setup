@@ -8,5 +8,5 @@ mouseless_solo_config_dest: "{{ ansible_user_dir }}/.config/mouseless/config.yam
 # Leaving Mouseless running against this config reintroduces the LeftCtrl collision
 # and the device feedback loop, so this defaults to true.
 mouseless_solo_remove_click_autostart: true
-mouseless_solo_startup_file: "{{ ansible_user_dir }}/.config/hypr/UserConfigs/Startup_Apps.conf"
-mouseless_solo_click_marker: "# {mark} ANSIBLE MANAGED — mouseless.click autostart"
+mouseless_solo_startup_file: "{{ ansible_user_dir }}/.config/hypr/UserConfigs/user_startup.lua"
+mouseless_solo_click_marker: "-- {mark} ANSIBLE MANAGED — mouseless.click autostart"

@@ -9,7 +9,7 @@
   ansible.builtin.git:
     repo: "{{ hypr_repo_url }}"
     dest: "{{ hypr_install_path }}"
-    version: main
+    version: "{{ hypr_repo_version }}"
     update: true
     force: true
 

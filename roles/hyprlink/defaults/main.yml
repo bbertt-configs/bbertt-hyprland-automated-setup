@@ -1,4 +1,20 @@
-hypr_repo_url: https://github.com/bbertt-configs/bbertt-hyprland-dotfiles.git
-hypr_install_path: "{{ ansible_user_dir }}/Projects/personal/custom-hyprland-configs"
+# SSH like the other personal repos (lazyvim): you push to this one, and the git
+# module rewrites `origin` to whatever URL is given here.
+hypr_repo_url: git@github.com:bbertt-configs/bbertt-hyprland-dotfiles.git
+# The repo root IS the hypr config dir (it holds .git), so ~/.config/hypr links here.
+hypr_install_path: "{{ ansible_user_dir }}/Projects/personal/custom-jakoolit-hypr/hypr"
 hypr_config_target: "{{ ansible_user_dir }}/.config/hypr"
 hypr_backup_suffix: ".bak"
+
+# Each laptop has its own dotfiles branch (monitor layout, lid handling, ...).
+# The branch is picked by matching these lowercase substrings against the DMI
+# product name (`cat /sys/class/dmi/id/product_name`); no match uses the default.
+# Override for one run with: -e hypr_repo_version=<branch>
+hypr_repo_branches:
+  tuf: asus-tuf
+  vivobook: vivobook
+hypr_repo_default_branch: main
+hypr_repo_version: >-
+  {{ hypr_repo_branches | dict2items
+     | selectattr('key', 'in', ansible_product_name | default('') | lower)
+     | map(attribute='value') | first | default(hypr_repo_default_branch) }}

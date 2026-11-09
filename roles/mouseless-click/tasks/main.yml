@@ -32,13 +32,6 @@
     method: "{{ mouseless_click_flatpak_method }}"
     state: present
 
-- name: Ensure Hyprland UserConfigs directory exists
-  tags: [mouseless-click]
-  ansible.builtin.file:
-    path: "{{ mouseless_click_startup_file | dirname }}"
-    state: directory
-    mode: '0755'
-
 # Order is critical. Whichever program starts first wins the exclusive EVIOCGRAB on
 # the physical keyboards. jbensmann must win: without the grab it cannot suppress the
 # original keystroke, so CapsLock+h would emit both "h" and Left arrow. Waiting for its
@@ -49,15 +42,24 @@
 # Launches through mouseless-launch rather than `flatpak run` directly, so the
 # exclusion list is regenerated immediately before every launch — see that script
 # and defaults/main.yml for why that has to happen there.
+#
+# The block calls exec_once(), a local defined by user_startup.lua itself, and runs
+# on hyprland.start like the file's own startup list. It is appended at the end of
+# the file so it never depends on the layout of that list. create is off on purpose:
+# the block is not valid on its own, and the file always comes from the dotfiles.
 - name: Configure Mouseless autostart in Hyprland
   tags: [mouseless-click]
   ansible.builtin.blockinfile:
     path: "{{ mouseless_click_startup_file }}"
     marker: "{{ mouseless_click_marker }}"
-    create: true
-    mode: '0644'
+    create: false
     block: |
-      exec-once = sh -c 'for i in $(seq 1 {{ mouseless_click_wait_timeout }}); do grep -q "{{ mouseless_click_wait_device }}" /proc/bus/input/devices && break; sleep 1; done; {{ mouseless_click_launch_script_dest }}'
+      local mouseless_click_cmd = [[sh -c 'for i in $(seq 1 {{ mouseless_click_wait_timeout }}); do grep -q "{{ mouseless_click_wait_device }}" /proc/bus/input/devices && break; sleep 1; done; {{ mouseless_click_launch_script_dest }}']]
+      if hl and hl.on then
+        hl.on("hyprland.start", function() exec_once(mouseless_click_cmd) end)
+      else
+        exec_once(mouseless_click_cmd)
+      end
 
 - name: Ensure ~/.local/bin exists
   tags: [mouseless-click]
@@ -114,15 +116,16 @@
       {{ d }}
       {% endfor %}
 
-# UserKeybinds.conf is the file the dotfiles explicitly reserve for user binds, and
-# hyprland.conf already sources it. Managed with blockinfile because hyprlink force
-# updates that repo, which would otherwise drop the bind.
+# user_keybinds.lua is the file the dotfiles reserve for user binds; it is loaded
+# after the default binds. The block calls bind() and exec_cmd(), locals defined by
+# that file, so it is appended at the end and the file is never created from scratch.
+# Managed with blockinfile because hyprlink force updates that repo, which would
+# otherwise drop the bind.
 - name: Bind mouseless refresh in Hyprland
   tags: [mouseless-click]
   ansible.builtin.blockinfile:
     path: "{{ mouseless_click_keybind_file }}"
     marker: "{{ mouseless_click_keybind_marker }}"
-    create: true
-    mode: '0644'
+    create: false
     block: |
-      bindd = {{ mouseless_click_refresh_bind }}, refresh mouseless layers, exec, {{ mouseless_click_refresh_script_dest }}
+      bind("{{ mouseless_click_refresh_bind_mods }}", "{{ mouseless_click_refresh_bind_key }}", exec_cmd("{{ mouseless_click_refresh_script_dest }}"), { description = "refresh mouseless layers" })

@@ -19,8 +19,9 @@ mouseless_click_flatpak_method: user
 
 # Hyprland autostart. Written into the hyprlink-managed dotfiles repo, so this role
 # must run AFTER hyprlink (which does a force git update and would discard the block).
-mouseless_click_startup_file: "{{ ansible_user_dir }}/.config/hypr/UserConfigs/Startup_Apps.conf"
-mouseless_click_marker: "# {mark} ANSIBLE MANAGED — mouseless.click autostart"
+# The dotfiles use Hyprland's Lua config (0.55+), so markers are Lua `--` comments.
+mouseless_click_startup_file: "{{ ansible_user_dir }}/.config/hypr/UserConfigs/user_startup.lua"
+mouseless_click_marker: "-- {mark} ANSIBLE MANAGED — mouseless.click autostart"
 
 # Name of jbensmann's uinput keyboard. The autostart waits for this device so
 # jbensmann wins the exclusive EVIOCGRAB on the physical keyboards.
@@ -34,9 +35,10 @@ mouseless_click_wait_timeout: 30
 # remove it; the keybind itself does live in that repo and is re-applied each run.
 mouseless_click_refresh_script_src: files/mouseless-refresh
 mouseless_click_refresh_script_dest: "{{ ansible_user_dir }}/.local/bin/mouseless-refresh"
-mouseless_click_keybind_file: "{{ ansible_user_dir }}/.config/hypr/UserConfigs/UserKeybinds.conf"
-mouseless_click_keybind_marker: "# {mark} ANSIBLE MANAGED — mouseless refresh keybind"
-mouseless_click_refresh_bind: "$mainMod CTRL ALT, R"
+mouseless_click_keybind_file: "{{ ansible_user_dir }}/.config/hypr/UserConfigs/user_keybinds.lua"
+mouseless_click_keybind_marker: "-- {mark} ANSIBLE MANAGED — mouseless refresh keybind"
+mouseless_click_refresh_bind_mods: "SUPER CTRL ALT"
+mouseless_click_refresh_bind_key: "R"
 
 # mouseless-devices prints one exclusion entry (ids:VVVV:PPPP, or the device Name
 # when udev reports an all-zero vendor/product) per currently-connected physical
